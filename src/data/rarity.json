@@ -1,0 +1,22 @@
+[
+    {
+        "id": 0,
+        "name": "Common",
+        "color": "#c4cbd4"
+    },
+    {
+        "id": 1,
+        "name": "Uncommon",
+        "color": "#4a8fe8"
+    },
+    {
+        "id": 2,
+        "name": "Rare",
+        "color": "#e9bc1c"
+    },
+    {
+        "id": 3,
+        "name": "Legendary",
+        "color": "#8a1c1c"
+    }
+]

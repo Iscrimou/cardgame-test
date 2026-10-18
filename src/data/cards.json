@@ -1,0 +1,28 @@
+[
+    {
+        "name": "AENGUS, DESCENDENTE DE CATHUBODUA",
+        "type": "Criatura Lendária",
+        "subtype": "Guerreiro Celta",
+        "cost": 5,
+        "attack": 3,
+        "defense": 3,
+        "keywords": ["Iniciativa"],
+        "effect": "Aengus entra no campo de batalha com +X/+X, onde X é o número de criaturas celtas que você controla.",
+        "inscription": "[...] ATHVBODVAE AVG SERVILIA TERENTIA SLM",
+        "image": "Gemini_Generated_Image_bfktm3bfktm3bfkt.jpg",
+        "rarity": 3
+    },
+    {
+        "name": "LOBO SANGRENTO CAMINHANTE",
+        "type": "Criatura",
+        "subtype": "Lobo",
+        "cost": 4,
+        "attack": 4,
+        "defense": 2,
+        "keywords": ["Ameaçar"],
+        "effect": "Quando Lobo Sangrento Caminhante entra no campo de batalha, se ele foi conjurado de sua mão, ele causa 2 pontos de dano a qualquer alvo.",
+        "inscription": "Não pense que viverá muito após ouvir o uivo.",
+        "image": "Gemini_Generated_Image_j8thtdj8thtdj8th.jpg",
+        "rarity": 2
+    }
+]
