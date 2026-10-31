@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 750 1050" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente de Fundo Profundo e Sombrio -->
+    <radialGradient id="bgGradient" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#1c1d22"/>
+      <stop offset="55%" stop-color="#0d0e11"/>
+      <stop offset="100%" stop-color="#030405"/>
+    </radialGradient>
+
+    <!-- Metal Gótico / Prata Envelhecida Obscura -->
+    <linearGradient id="darkMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2c3038"/>
+      <stop offset="25%" stop-color="#5a6270"/>
+      <stop offset="50%" stop-color="#1e2126"/>
+      <stop offset="75%" stop-color="#404652"/>
+      <stop offset="100%" stop-color="#0f1114"/>
+    </linearGradient>
+
+    <!-- Borda Secundária de Ferro Batido -->
+    <linearGradient id="ironBorder" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f232a"/>
+      <stop offset="50%" stop-color="#0d0e12"/>
+      <stop offset="100%" stop-color="#181a20"/>
+    </linearGradient>
+
+    <!-- Pergaminho Decrépito / Queimado -->
+    <linearGradient id="darkScroll" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a39379"/>
+      <stop offset="30%" stop-color="#80715b"/>
+      <stop offset="70%" stop-color="#594c3b"/>
+      <stop offset="100%" stop-color="#30271c"/>
+    </linearGradient>
+
+    <!-- Orbe Místico do Custo -->
+    <radialGradient id="manaVoid" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#a83232"/>
+      <stop offset="40%" stop-color="#5e0f15"/>
+      <stop offset="85%" stop-color="#240306"/>
+      <stop offset="100%" stop-color="#080001"/>
+    </radialGradient>
+
+    <!-- Filtro de Sombra Densa / Projeção Obscura -->
+    <filter id="heavyShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#000000" flood-opacity="0.95"/>
+    </filter>
+
+    <!-- Vignette Interna para a Moldura da Arte -->
+    <radialGradient id="artVignette" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.8"/>
+    </radialGradient>
+
+    <!-- Clip Path para enquadrar perfeitamente a imagem na área do avatar -->
+    <clipPath id="avatarClip">
+      <rect x="86" y="166" width="578" height="428" rx="4"/>
+    </clipPath>
+  </defs>
+
+  <style>
+    .card-title { font-family: 'Cinzel', 'Georgia', 'Times New Roman', serif; font-weight: bold; fill: #100b07; font-size: 18px; letter-spacing: 0.5px; }
+    .card-type { font-family: 'Cinzel', 'Georgia', 'Times New Roman', serif; font-weight: 600; fill: #d1c7bd; font-size: 16px; letter-spacing: 1px; }
+    .card-body { font-family: 'Georgia', 'Times New Roman', serif; fill: #1c1610; font-size: 19px; line-height: 1.35; }
+    .cost-text { font-family: 'Impact', 'Arial Black', sans-serif; font-weight: bold; fill: #ffffff; font-size: 48px; text-anchor: middle; dominant-baseline: central; filter: drop-shadow(0px 0px 8px rgba(0,0,0,0.9)); }
+  </style>
+
+  <!-- ================= FUNDO E MOLDURA DA CARTA ================= -->
+  <!-- Corpo Principal do Card -->
+  <rect x="25" y="25" width="700" height="1000" rx="36" fill="url(#bgGradient)" stroke="#050507" stroke-width="10"/>
+
+  <!-- Moldura Externa de Metal Gótico -->
+  <rect x="48" y="48" width="654" height="954" rx="26" fill="none" stroke="url(#darkMetal)" stroke-width="12" filter="url(#heavyShadow)"/>
+  
+  <!-- Linha de Contorno de Ferro Interno -->
+  <rect x="64" y="64" width="622" height="922" rx="18" fill="none" stroke="url(#ironBorder)" stroke-width="4"/>
+
+  <!-- Cantoneiras Ornamentais Rústicas -->
+  <g fill="url(#darkMetal)">
+    <path d="M 64,120 L 120,64 L 95,64 L 64,95 Z"/>
+    <circle cx="92" cy="92" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+    <path d="M 686,120 L 630,64 L 655,64 L 686,95 Z"/>
+    <circle cx="658" cy="92" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+    <path d="M 64,930 L 120,986 L 95,986 L 64,955 Z"/>
+    <circle cx="92" cy="958" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+    <path d="M 686,930 L 630,986 L 655,986 L 686,955 Z"/>
+    <circle cx="658" cy="958" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+  </g>
+
+  <!-- ================= ARTE DA CARTA ================= -->
+  <g id="Avatar-Frame">
+    <!-- Moldura Sombria do Avatar -->
+    <rect x="80" y="160" width="590" height="440" rx="8" fill="#050608" stroke="url(#darkMetal)" stroke-width="6" filter="url(#heavyShadow)"/>
+    
+    <!-- Imagem da carta -->
+    <g clip-path="url(#avatarClip)">
+      <image xlink:href="Gemini_Generated_Image_bfktm3bfktm3bfkt.jpg" x="80" y="160" width="590" height="440" preserveAspectRatio="xMidYMin slice" />
+    </g>
+
+    <!-- Vignette de Profundidade nas Bordas da Arte -->
+    <rect x="86" y="166" width="578" height="428" rx="4" fill="url(#artVignette)" pointer-events="none"/>
+    <rect x="86" y="166" width="578" height="428" rx="4" fill="none" stroke="#000000" stroke-width="6" opacity="0.8" pointer-events="none"/>
+  </g>
+
+  <!-- Barra de Tipo da Carta -->
+  <g id="Type-Bar" filter="url(#heavyShadow)">
+    <path d="M 150,580 L 600,580 L 580,612 L 170,612 Z" fill="#121418" stroke="url(#darkMetal)" stroke-width="2.5"/>
+    <text x="375" y="601" text-anchor="middle" class="card-type">Feitiço</text>
+  </g>
+
+  <!-- ================= CAIXA DE TEXTO DA MÁGICA ================= -->
+  <g id="Scroll-Area" filter="url(#heavyShadow)">
+    <!-- Pergaminho Base -->
+    <path d="M 90,635 
+             Q 375,628 660,635 
+             Q 672,750 660,865 
+             Q 375,875 90,865 
+             Q 78,750 90,635 Z" 
+          fill="url(#darkScroll)" 
+          stroke="#1f1810" 
+          stroke-width="5" />
+
+    <!-- Detalhes de Textura do Pergaminho -->
+    <path d="M 90,635 Q 375,645 660,635" fill="none" stroke="#120e0a" stroke-width="3" opacity="0.7"/>
+    <path d="M 90,865 Q 375,855 660,865" fill="none" stroke="#120e0a" stroke-width="3" opacity="0.7"/>
+
+    <!-- Hastes Metálicas -->
+    <path d="M 75,632 C 75,620 110,615 375,615 C 640,615 675,620 675,632 C 675,640 640,638 375,638 C 110,638 75,640 75,632 Z" fill="url(#ironBorder)" stroke="url(#darkMetal)" stroke-width="2"/>
+    <path d="M 75,868 C 75,858 110,860 375,860 C 640,860 675,858 675,868 C 675,880 640,882 375,882 C 110,882 75,880 75,868 Z" fill="url(#ironBorder)" stroke="url(#darkMetal)" stroke-width="2"/>
+
+    <!-- Texto da mágica -->
+    <text x="120" y="680" class="card-body">
+      <tspan x="120" dy="0">Aengus entra no campo de batalha com +X/+X,</tspan>
+      <tspan x="120" dy="25">onde X é o número de criaturas celtas que</tspan>
+      <tspan x="120" dy="25">você controla.</tspan>
+    </text>
+  </g>
+
+  <!-- ================= NOME DA CARTA ================= -->
+  <g id="Header-Banner" filter="url(#heavyShadow)">
+    <path d="M 115,80 
+             L 635,80 
+             L 655,115 
+             L 635,150 
+             L 115,150 
+             L 95,115 Z" 
+          fill="url(#darkScroll)" 
+          stroke="#1f1810" 
+          stroke-width="4"/>
+    
+    <path d="M 115,80 L 135,115 L 115,150 Z" fill="#1d1711" stroke="#0a0805" stroke-width="2"/>
+    <path d="M 635,80 L 615,115 L 635,150 Z" fill="#1d1711" stroke="#0a0805" stroke-width="2"/>
+
+    <rect x="140" y="90" width="470" height="50" rx="3" fill="none" stroke="url(#darkMetal)" stroke-width="2" opacity="0.8"/>
+
+    <!-- Texto do Título -->
+    <text x="375" y="123" text-anchor="middle" class="card-title">AENGUS, DESCENDENTE DE CATHUBODUA</text>
+  </g>
+
+  <!-- ================= MARCADOR DE CUSTO ================= -->
+  <g id="Cost-Indicator" filter="url(#heavyShadow)">
+    <polygon points="90,50 135,85 135,145 90,180 45,145 45,85" fill="url(#darkMetal)" stroke="#000000" stroke-width="5"/>
+    <polygon points="90,58 127,88 127,140 90,170 53,140 53,88" fill="url(#manaVoid)" stroke="#1a0204" stroke-width="3"/>
+    <circle cx="90" cy="114" r="34" fill="none" stroke="#000000" stroke-width="3" opacity="0.5"/>
+    <!-- Valor do Custo -->
+    <text x="90" y="115" class="cost-text">5</text>
+  </g>
+
+  <!-- Emblema de raridade -->
+  <g id="Center-Emblem" filter="url(#heavyShadow)">
+    <polygon points="375,915 390,935 375,955 360,935" fill="url(#darkMetal)" stroke="#000000" stroke-width="2"/>
+    <circle cx="375" cy="935" r="4" fill="#8a1c1c"/>
+  </g>
+
+</svg>
