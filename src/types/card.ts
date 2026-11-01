@@ -1,10 +1,10 @@
 export type Card = {
   name: string
   type: string
-  subtype: string
+  subtype?: string
   cost: number
-  attack: number
-  defense: number
+  attack?: number
+  defense?: number
   keywords: string[]
   effect: string
   inscription: string

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import CardTemplate from '@/components/CardTemplate.vue'
+import CardRenderer from '@/components/CardRenderer.vue'
 import DiscardCardButton from '@/components/game/DiscardCardButton.vue'
 import PlayCardButton from '@/components/game/PlayCardButton.vue'
 import ZoomCardButton from '@/components/game/ZoomCardButton.vue'
@@ -137,7 +137,7 @@ startGame()
         <div class="mt-4 flex min-h-32 flex-wrap justify-center gap-3">
           <div v-for="instance in opponent.field" :key="instance.id"
             class="aspect-[5/7] w-24 overflow-hidden rounded-lg sm:w-32">
-            <CardTemplate :card="instance.card" />
+            <CardRenderer :card="instance.card" />
           </div>
           <p v-if="!opponent.field.length" class="self-center text-sm text-slate-500">
             Nenhuma carta em campo.
@@ -170,7 +170,7 @@ startGame()
         <div class="mt-4 flex min-h-40 flex-wrap justify-center gap-3 rounded-xl bg-black/20 p-3">
           <div v-for="instance in currentPlayer.field" :key="instance.id"
             class="aspect-[5/7] w-24 overflow-hidden rounded-lg sm:w-32">
-            <CardTemplate :card="instance.card" />
+            <CardRenderer :card="instance.card" />
           </div>
           <p v-if="!currentPlayer.field.length" class="self-center text-sm text-slate-500">
             Suas cartas jogadas aparecerão aqui.
@@ -187,7 +187,7 @@ startGame()
               class="h-full w-full overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               :aria-label="`Selecionar ${instance.card.name}, custo ${instance.card.cost}`"
               :aria-pressed="selectedCardId === instance.id" @click="selectedCardId = instance.id">
-              <CardTemplate :card="instance.card" />
+              <CardRenderer :card="instance.card" />
             </button>
             <div v-if="selectedCardId === instance.id" class="absolute left-1/2 top-2 flex -translate-x-1/2 gap-2">
               <ZoomCardButton :card-name="instance.card.name" @click="zoomedCard = instance" />
@@ -224,7 +224,7 @@ startGame()
       </button>
 
       <div class="h-[min(85vh,calc((100vw-3rem)*1.4))] w-[min(calc(100vw-3rem),calc(85vh/1.4))]">
-        <CardTemplate :card="zoomedCard.card" />
+        <CardRenderer :card="zoomedCard.card" />
       </div>
     </div>
 

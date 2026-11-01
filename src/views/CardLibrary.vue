@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import cards from '@/data/cards.json'
-import CardTemplate from '@/components/CardTemplate.vue'
+import CardRenderer from '@/components/CardRenderer.vue'
 import { onMounted, onUnmounted, ref } from 'vue'
 
 const selectedCard = ref<(typeof cards)[number] | null>(null)
@@ -33,7 +33,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
           class="aspect-[5/7] w-full max-w-[280px] shrink-0 cursor-zoom-in rounded-2xl transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-400"
           @click="selectedCard = card"
         >
-          <CardTemplate :card="card" />
+          <CardRenderer :card="card" />
         </button>
       </div>
 
@@ -58,7 +58,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
       </button>
 
       <div class="h-[min(85vh,calc((100vw-3rem)*1.4))] w-[min(calc(100vw-3rem),calc(85vh/1.4))]">
-        <CardTemplate :card="selectedCard" />
+        <CardRenderer :card="selectedCard" />
       </div>
     </div>
   </main>

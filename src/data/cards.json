@@ -102,6 +102,16 @@
         "inscription": "",
         "image": "Gemini_Generated_Image_khgmeukhgmeukhgm.jpg",
         "rarity": 2
+    },
+    {
+        "name": "BRILHO DA LUA DE SANGUE",
+        "type": "Encantamento",
+        "cost": 3,
+        "keywords": [],
+        "effect": "Criaturas de tipo Lobo que você controla recebem +1/+1 e têm Iniciativa.",
+        "inscription": "",
+        "image": "Gemini_Generated_Image_1mtb1q1mtb1q1mtb.jpg",
+        "rarity": 2
     }
 
 ]
