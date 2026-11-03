@@ -13,6 +13,7 @@ export type PlayerState = {
   graveyard: CardInstance[]
   maxMana: number
   mana: number
+  life: number
   hasTakenTurn: boolean
 }
 

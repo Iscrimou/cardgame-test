@@ -43,6 +43,7 @@ export const useGameStore = defineStore('game', () => {
       graveyard: [],
       maxMana: 1,
       mana: 1,
+      life: 30,
       hasTakenTurn: false,
     }
   }

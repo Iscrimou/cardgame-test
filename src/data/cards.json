@@ -59,7 +59,7 @@
         "attack": 2,
         "defense": 2,
         "keywords": [],
-        "effect": "Até o fim do turno, se você invocou um lobo de custo 4 ou maior, dê +2/+0 a essa criatura.",
+        "effect": "Até o fim de cada turno, se você invocou um lobo de custo 4 ou maior, dê +2/+0 a essa criatura.",
         "inscription": "",
         "image": "Gemini_Generated_Image_x70csnx70csnx70c.jpg",
         "rarity": 1
@@ -98,7 +98,7 @@
         "attack": 4,
         "defense": 3,
         "keywords": [],
-        "effect": "Quando Farbyn e Snow ataca, se outro lobo está atacando, dê +1/+2 e Ameaçar a Farbyn e Snow até o final do turno.",
+        "effect": "Quando Farbyn e Snow ataca, se outra criatura tipo Lobo está atacando, dê +1/+2 e Ameaçar a Farbyn e Snow até o final do turno.",
         "inscription": "",
         "image": "Gemini_Generated_Image_khgmeukhgmeukhgm.jpg",
         "rarity": 2

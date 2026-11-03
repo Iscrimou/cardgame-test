@@ -104,12 +104,12 @@ startGame()
           :aria-current="currentPhase === phase.id ? 'step' : undefined"
           class="rounded-lg border px-3 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
           :class="currentPhase === phase.id
-              ? 'border-amber-300 bg-amber-400 text-slate-950'
-              : index < phaseIndex
-                ? 'border-emerald-700 bg-emerald-950 text-emerald-200'
-                : isNextPhase(phase.id)
-                  ? 'border-slate-500 bg-slate-800 text-white hover:bg-slate-700'
-                  : 'border-slate-800 bg-slate-900 text-slate-500'
+            ? 'border-amber-300 bg-amber-400 text-slate-950'
+            : index < phaseIndex
+              ? 'border-emerald-700 bg-emerald-950 text-emerald-200'
+              : isNextPhase(phase.id)
+                ? 'border-slate-500 bg-slate-800 text-white hover:bg-slate-700'
+                : 'border-slate-800 bg-slate-900 text-slate-500'
             " @click="advancePhase">
           {{ phase.label }}
         </button>
@@ -124,6 +124,7 @@ startGame()
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-lg font-bold">{{ opponent.name }}</h2>
           <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-300">
+            <span>Vida: {{ opponent.life }}</span>
             <span>Mana: {{ opponent.mana }}/{{ opponent.maxMana }}</span>
             <span>Mão: {{ opponent.hand.length }}</span>
             <span>Baralho: {{ opponent.deck.length }}</span>
@@ -151,7 +152,7 @@ startGame()
           <div>
             <h2 class="text-lg font-bold">{{ currentPlayer.name }} <span class="text-amber-300">(sua vez)</span></h2>
             <p class="text-sm text-slate-300">
-              Fase: {{ phases[phaseIndex]?.label }} · Mana: {{ currentPlayer.mana }}/{{
+              Vida: {{ currentPlayer.life }} · Mana: {{ currentPlayer.mana }}/{{
                 currentPlayer.maxMana
               }}
             </p>
