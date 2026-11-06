@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import CardRenderer from '@/components/CardRenderer.vue'
 import DiscardCardButton from '@/components/game/DiscardCardButton.vue'
 import PlayCardButton from '@/components/game/PlayCardButton.vue'
 import ZoomCardButton from '@/components/game/ZoomCardButton.vue'
 import { useGameStore } from '@/stores/game'
-import type { CardInstance, PlayerState } from '@/types/game'
+import type { CardInstance, PhaseId, PlayerState } from '@/types/game'
 
 const gameStore = useGameStore()
 const {
@@ -18,19 +18,87 @@ const {
   canPlayCards,
   isDiscarding,
   message,
+  combatStep,
+  attackers,
+  blockers,
+  damageAssignments,
+  canResolveCombat,
 } = storeToRefs(gameStore)
-const { canPlay, isNextPhase } = gameStore
+const {
+  canPlay,
+  canNavigateToPhase,
+  canAttack,
+  canBlock,
+  toggleAttacker,
+  declareAttack,
+  assignBlocker,
+  declareDefenders,
+  setCombatDamage,
+  resolveCombat,
+  skipCombat,
+} = gameStore
 const phases = gameStore.phases
 
 const selectedCardId = ref<number | null>(null)
 const zoomedCard = ref<CardInstance | null>(null)
 const graveyardOwner = ref<PlayerState | null>(null)
+const defendingCardId = ref<number | null>(null)
+const availableBlockTargets = computed(() =>
+  currentPlayer.value.field.filter((instance) => attackers.value.includes(instance.id)),
+)
+const damageAllocationGroups = computed(() =>
+  currentPlayer.value.field
+    .filter((instance) => attackers.value.includes(instance.id))
+    .map((attacker) => ({
+      attacker,
+      defenders: opponent.value.field.filter(
+        (defender) => blockers.value[defender.id] === attacker.id,
+      ),
+    }))
+    .filter(({ defenders }) => defenders.length > 1),
+)
+
+function openBlockerChoice(instance: CardInstance) {
+  defendingCardId.value = instance.id
+}
+
+function selectBlockTarget(attackerId: number) {
+  if (defendingCardId.value !== null && assignBlocker(defendingCardId.value, attackerId)) {
+    defendingCardId.value = null
+  }
+}
+
+function blockingAttackerName(defenderId: number) {
+  const attackerId = blockers.value[defenderId]
+  return currentPlayer.value.field.find(({ id }) => id === attackerId)?.card.name
+}
+
+function toggleAttack(instance: CardInstance) {
+  toggleAttacker(instance)
+}
+
+function updateCombatDamage(attackerId: number, defenderId: number, event: Event) {
+  if (event.target instanceof HTMLInputElement) {
+    const updated = setCombatDamage(attackerId, defenderId, event.target.valueAsNumber)
+    if (!updated) {
+      event.target.value = String(damageAssignments.value[attackerId]?.[defenderId] ?? 0)
+    }
+  }
+}
+
+function assignedCombatDamage(attackerId: number) {
+  return Object.values(damageAssignments.value[attackerId] ?? {}).reduce(
+    (total, amount) => total + amount,
+    0,
+  )
+}
 
 function startGame() {
   gameStore.startGame()
   selectedCardId.value = null
   zoomedCard.value = null
   graveyardOwner.value = null
+  defendingCardId.value = null
 }
 
 function playCard(instance: CardInstance) {
@@ -53,6 +121,13 @@ function endTurn() {
 function advancePhase() {
   gameStore.advancePhase()
   selectedCardId.value = null
+  defendingCardId.value = null
+}
+
+function selectPhase(phase: PhaseId) {
+  gameStore.goToPhase(phase)
+  selectedCardId.value = null
+  defendingCardId.value = null
 }
 
 function closeZoom() {
@@ -100,17 +175,18 @@ startGame()
       </header>
 
       <nav aria-label="Fases do turno" class="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <button v-for="(phase, index) in phases" :key="phase.id" type="button" :disabled="!isNextPhase(phase.id)"
+        <button v-for="(phase, index) in phases" :key="phase.id" type="button"
+          :disabled="!canNavigateToPhase(phase.id)"
           :aria-current="currentPhase === phase.id ? 'step' : undefined"
           class="rounded-lg border px-3 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
           :class="currentPhase === phase.id
             ? 'border-amber-300 bg-amber-400 text-slate-950'
             : index < phaseIndex
               ? 'border-emerald-700 bg-emerald-950 text-emerald-200'
-              : isNextPhase(phase.id)
+              : canNavigateToPhase(phase.id)
                 ? 'border-slate-500 bg-slate-800 text-white hover:bg-slate-700'
                 : 'border-slate-800 bg-slate-900 text-slate-500'
-            " @click="advancePhase">
+            " @click="selectPhase(phase.id)">
           {{ phase.label }}
         </button>
       </nav>
@@ -136,9 +212,23 @@ startGame()
           </div>
         </div>
         <div class="mt-4 flex min-h-32 flex-wrap justify-center gap-3">
-          <div v-for="instance in opponent.field" :key="instance.id"
-            class="aspect-[5/7] w-24 overflow-hidden rounded-lg sm:w-32">
-            <CardRenderer :card="instance.card" />
+          <div v-for="instance in opponent.field" :key="instance.id" class="w-24 sm:w-32">
+            <div class="aspect-[5/7] overflow-hidden rounded-lg">
+              <CardRenderer :card="instance.card" />
+            </div>
+            <template v-if="instance.card.type.startsWith('Criatura')">
+              <p class="mt-1 text-center text-xs text-slate-300">
+                Vida: {{ (instance.card.defense ?? 0) - (instance.damage ?? 0) }}/{{ instance.card.defense }}
+              </p>
+              <button v-if="combatStep === 'defense' && canBlock(instance)" type="button"
+                class="mt-1 w-full rounded bg-sky-800 px-2 py-1 text-xs font-semibold hover:bg-sky-700"
+                @click="openBlockerChoice(instance)">
+                Defender
+              </button>
+              <p v-else-if="blockers[instance.id] !== undefined" class="mt-1 text-center text-xs text-sky-300">
+                Defendendo {{ blockingAttackerName(instance.id) }}
+              </p>
+            </template>
           </div>
           <p v-if="!opponent.field.length" class="self-center text-sm text-slate-500">
             Nenhuma carta em campo.
@@ -150,7 +240,12 @@ startGame()
         class="rounded-2xl border border-amber-900/60 bg-slate-900/80 p-4 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 class="text-lg font-bold">{{ currentPlayer.name }} <span class="text-amber-300">(sua vez)</span></h2>
+            <h2 class="text-lg font-bold">
+              {{ currentPlayer.name }}
+              <span class="text-amber-300">
+                {{ combatStep === 'defense' ? `(defesa de ${opponent.name})` : '(sua vez)' }}
+              </span>
+            </h2>
             <p class="text-sm text-slate-300">
               Vida: {{ currentPlayer.life }} · Mana: {{ currentPlayer.mana }}/{{
                 currentPlayer.maxMana
@@ -169,14 +264,59 @@ startGame()
         </div>
 
         <div class="mt-4 flex min-h-40 flex-wrap justify-center gap-3 rounded-xl bg-black/20 p-3">
-          <div v-for="instance in currentPlayer.field" :key="instance.id"
-            class="aspect-[5/7] w-24 overflow-hidden rounded-lg sm:w-32">
-            <CardRenderer :card="instance.card" />
+          <div v-for="instance in currentPlayer.field" :key="instance.id" class="w-24 sm:w-32">
+            <div class="aspect-[5/7] overflow-hidden rounded-lg">
+              <CardRenderer :card="instance.card" />
+            </div>
+            <template v-if="instance.card.type.startsWith('Criatura')">
+              <p class="mt-1 text-center text-xs text-slate-300">
+                Vida: {{ (instance.card.defense ?? 0) - (instance.damage ?? 0) }}/{{ instance.card.defense }}
+              </p>
+              <button v-if="combatStep === 'attack' && canAttack(instance)" type="button"
+                class="mt-1 w-full rounded px-2 py-1 text-xs font-semibold"
+                :class="attackers.includes(instance.id)
+                  ? 'bg-amber-400 text-slate-950 hover:bg-amber-300'
+                  : 'bg-slate-700 text-white hover:bg-slate-600'"
+                :aria-pressed="attackers.includes(instance.id)" @click="toggleAttack(instance)">
+                {{ attackers.includes(instance.id) ? 'Remover ataque' : 'Atacar' }}
+              </button>
+              <p v-else-if="attackers.includes(instance.id)" class="mt-1 text-center text-xs text-amber-300">
+                Atacando
+              </p>
+              <p v-else-if="combatStep === 'attack' && instance.summonedOnTurn === turnNumber"
+                class="mt-1 text-center text-xs text-slate-400">
+                Enjoo de invocação
+              </p>
+            </template>
           </div>
           <p v-if="!currentPlayer.field.length" class="self-center text-sm text-slate-500">
             Suas cartas jogadas aparecerão aqui.
           </p>
         </div>
+
+        <section v-if="combatStep === 'damage'" class="mt-5 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+          <h3 class="font-semibold">Distribua o dano de ataque</h3>
+          <p class="mt-1 text-sm text-slate-400">
+            Atribua todo o dano de cada atacante entre as criaturas que o bloqueiam.
+          </p>
+          <div v-for="group in damageAllocationGroups" :key="group.attacker.id" class="mt-4">
+            <p class="text-sm font-semibold text-amber-200">
+              {{ group.attacker.card.name }} · {{ group.attacker.card.attack ?? 0 }} de dano
+              (atribuído: {{ assignedCombatDamage(group.attacker.id) }})
+            </p>
+            <div class="mt-2 grid gap-2 sm:grid-cols-2">
+              <label v-for="defender in group.defenders" :key="defender.id"
+                class="flex items-center justify-between gap-3 rounded-lg bg-slate-800 px-3 py-2 text-sm">
+                <span>{{ defender.card.name }}</span>
+                <input type="number" min="0" :max="group.attacker.card.attack ?? 0"
+                  :value="damageAssignments[group.attacker.id]?.[defender.id] ?? 0"
+                  :aria-label="`Dano de ${group.attacker.card.name} em ${defender.card.name}`"
+                  class="w-20 rounded bg-slate-950 px-2 py-1 text-right text-white"
+                  @input="updateCombatDamage(group.attacker.id, defender.id, $event)">
+              </label>
+            </div>
+          </div>
+        </section>
 
         <h3 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-300">Sua mão</h3>
         <p v-if="!currentPlayer.hand.length" class="mt-3 text-sm text-slate-500">
@@ -205,6 +345,33 @@ startGame()
             <template v-if="!canPlayCards">Cartas só podem ser jogadas nas fases principais.</template>
             <template v-else>Selecione uma carta com custo igual ou menor que sua mana disponível.</template>
           </p>
+          <template v-if="currentPhase === 'combat' && combatStep === 'attack'">
+            <button v-if="attackers.length" type="button"
+              class="rounded-lg bg-amber-400 px-5 py-3 font-bold text-slate-950 hover:bg-amber-300"
+              @click="declareAttack">
+              Declarar ataque
+            </button>
+            <button v-else type="button"
+              class="rounded-lg bg-slate-700 px-5 py-3 font-bold text-white hover:bg-slate-600"
+              @click="skipCombat">
+              Pular combate
+            </button>
+          </template>
+          <button v-if="currentPhase === 'combat' && combatStep === 'defense'" type="button"
+            class="rounded-lg bg-amber-400 px-5 py-3 font-bold text-slate-950 hover:bg-amber-300"
+            @click="declareDefenders">
+            Declarar defensores
+          </button>
+          <button v-if="currentPhase === 'combat' && combatStep === 'damage'" type="button"
+            class="rounded-lg bg-amber-400 px-5 py-3 font-bold text-slate-950 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="!canResolveCombat" @click="resolveCombat">
+            Resolver combate
+          </button>
+          <button v-if="currentPhase !== 'end'" type="button"
+            class="rounded-lg bg-slate-700 px-5 py-3 font-bold text-white hover:bg-slate-600"
+            @click="advancePhase">
+            Avançar fase
+          </button>
           <button v-if="currentPhase === 'end'" type="button"
             class="rounded-lg bg-amber-400 px-5 py-3 font-bold text-slate-950 hover:bg-amber-300"
             :disabled="isDiscarding && currentPlayer.hand.length > 6"
@@ -213,6 +380,30 @@ startGame()
             Encerrar turno
           </button>
         </div>
+      </section>
+    </div>
+
+    <div v-if="defendingCardId !== null"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm" role="dialog"
+      aria-modal="true" aria-labelledby="blocker-choice-title" @click.self="defendingCardId = null">
+      <section class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <h2 id="blocker-choice-title" class="text-xl font-bold">Escolha qual atacante esta criatura vai defender</h2>
+        <p class="mt-1 text-sm text-slate-400">Uma criatura pode defender apenas um atacante.</p>
+        <div class="mt-4 flex flex-col gap-2">
+          <button v-for="attacker in availableBlockTargets" :key="attacker.id" type="button"
+            class="rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
+            @click="selectBlockTarget(attacker.id)">
+            {{ attacker.card.name }} · {{ attacker.card.attack ?? 0 }}/{{ attacker.card.defense ?? 0 }}
+          </button>
+          <p v-if="!availableBlockTargets.length" class="text-sm text-slate-400">
+            Não há atacantes para bloquear.
+          </p>
+        </div>
+        <button type="button"
+          class="mt-4 rounded-lg border border-slate-600 px-4 py-2 text-sm hover:bg-slate-800"
+          @click="defendingCardId = null">
+          Cancelar
+        </button>
       </section>
     </div>
 

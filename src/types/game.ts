@@ -3,6 +3,8 @@ import type { Card } from '@/types/card'
 export type CardInstance = {
   id: number
   card: Card
+  summonedOnTurn?: number
+  damage?: number
 }
 
 export type PlayerState = {
