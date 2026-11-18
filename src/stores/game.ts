@@ -1,7 +1,43 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import cards from '@/data/cards.json'
-import type { CardInstance, PhaseId, PlayerState } from '@/types/game'
+import cards from '@/data/cards'
+import type {
+  CardEffect,
+  CardEffectAction,
+  CardTargetFilter,
+  EffectTarget,
+  NumberFilter,
+} from '@/types/card'
+import type { CardInstance, CardStatModifier, PhaseId, PlayerState } from '@/types/game'
+
+type FieldEvent =
+  | { type: 'field'; transition: 'enters' | 'leaves'; instance: CardInstance; ownerIndex: number }
+  | { type: 'phase'; phase: PhaseId; ownerIndex: number }
+
+type EffectResolution = {
+  effect: CardEffect
+  source: CardInstance
+  sourceOwnerIndex: number
+  event: FieldEvent
+  actionIndex: number
+}
+
+type OwnedCard = {
+  instance: CardInstance
+  ownerIndex: number
+  zone: 'field' | 'hand'
+}
+
+type PendingTarget = {
+  sourceName: string
+  candidates: OwnedCard[]
+}
+
+type EffectiveStats = {
+  cost: number
+  power: number
+  resistance: number
+}
 
 export const gamePhases = [
   { id: 'draw', label: 'Compra' },
@@ -10,6 +46,9 @@ export const gamePhases = [
   { id: 'main-two', label: 'Principal 2' },
   { id: 'end', label: 'Fim do turno' },
 ] as const satisfies { id: PhaseId; label: string }[]
+
+const maxEffectActionsPerResolution = 1000
+const maxTokensPerEffect = 100
 
 export const useGameStore = defineStore('game', () => {
   const players = ref<[PlayerState, PlayerState]>([
@@ -25,6 +64,11 @@ export const useGameStore = defineStore('game', () => {
   const attackers = ref<number[]>([])
   const blockers = ref<Record<number, number>>({})
   const damageAssignments = ref<Record<number, Record<number, number>>>({})
+  const pendingEffectTarget = ref<PendingTarget | null>(null)
+  const effectQueue: EffectResolution[] = []
+  let resolvingEffects = false
+  let checkingStateBasedActions = false
+  let pendingTurnStart = false
   let nextCardId = 0
 
   const currentPlayer = computed(() =>
@@ -46,10 +90,157 @@ export const useGameStore = defineStore('game', () => {
       field: [],
       graveyard: [],
       maxMana: 1,
-      mana: 1,
+      mana: 10,
       life: 30,
       hasTakenTurn: false,
     }
+  }
+
+  function getOwnedCards(zone: 'field' | 'hand' | 'any' = 'any'): OwnedCard[] {
+    return players.value.flatMap((player, ownerIndex) => [
+      ...(zone === 'hand'
+        ? []
+        : player.field.map((instance) => ({ instance, ownerIndex, zone: 'field' as const }))),
+      ...(zone === 'field'
+        ? []
+        : player.hand.map((instance) => ({ instance, ownerIndex, zone: 'hand' as const }))),
+    ])
+  }
+
+  function getBaseStats(instance: CardInstance): EffectiveStats {
+    const modifiers = instance.modifiers ?? []
+    return {
+      cost: Math.max(0, instance.card.cost + modifiers.reduce((sum, item) => sum + item.cost, 0)),
+      power: Math.max(
+        0,
+        (instance.card.attack ?? 0) + modifiers.reduce((sum, item) => sum + item.power, 0),
+      ),
+      resistance: Math.max(
+        0,
+        (instance.card.defense ?? 0) + modifiers.reduce((sum, item) => sum + item.resistance, 0),
+      ),
+    }
+  }
+
+  function matchesNumber(value: number, filter: NumberFilter) {
+    if (typeof filter === 'number') {
+      return value === filter
+    }
+
+    return (
+      (filter.min === undefined || value >= filter.min) &&
+      (filter.max === undefined || value <= filter.max)
+    )
+  }
+
+  function matchesTargetFilter(
+    target: OwnedCard,
+    sourceOwnerIndex: number,
+    filter: CardTargetFilter,
+    currentStats?: EffectiveStats,
+  ) {
+    const zone = filter.zone ?? 'field'
+    if (zone !== 'any' && target.zone !== zone) {
+      return false
+    }
+
+    if (
+      (filter.controller === 'you' && target.ownerIndex !== sourceOwnerIndex) ||
+      (filter.controller === 'opponent' && target.ownerIndex === sourceOwnerIndex)
+    ) {
+      return false
+    }
+
+    const card = target.instance.card
+    if (filter.type && !card.type.startsWith(filter.type)) {
+      return false
+    }
+
+    if (filter.subtype && !card.subtype?.split(/[\s,]+/).includes(filter.subtype)) {
+      return false
+    }
+
+    const stats = currentStats ?? getEffectiveStats(target.instance)
+    return (
+      (filter.cost === undefined || matchesNumber(card.cost, filter.cost)) &&
+      (filter.power === undefined || matchesNumber(stats.power, filter.power)) &&
+      (filter.resistance === undefined || matchesNumber(stats.resistance, filter.resistance))
+    )
+  }
+
+  function getEffectiveStats(instance: CardInstance): EffectiveStats {
+    const stats = getBaseStats(instance)
+    const target = getOwnedCards().find(({ instance: candidate }) => candidate.id === instance.id)
+
+    if (!target) {
+      return stats
+    }
+
+    for (const source of getOwnedCards('field')) {
+      for (const effect of source.instance.card.effects ?? []) {
+        if (effect.trigger.type !== 'continuous') {
+          continue
+        }
+
+        for (const action of effect.actions) {
+          if (action.type !== 'modify') {
+            continue
+          }
+
+          const appliesToSource =
+            action.target.selection === 'source' &&
+            source.instance.id === instance.id &&
+            matchesTargetFilter(target, source.ownerIndex, action.target.filter, stats)
+          const appliesToAll =
+            action.target.selection === 'all' &&
+            matchesTargetFilter(target, source.ownerIndex, action.target.filter, stats)
+
+          if (appliesToSource || appliesToAll) {
+            stats.cost += action.cost ?? 0
+            stats.power += action.power ?? 0
+            stats.resistance += action.resistance ?? 0
+          }
+        }
+      }
+    }
+
+    stats.cost = Math.max(0, stats.cost)
+    stats.power = Math.max(0, stats.power)
+    stats.resistance = Math.max(0, stats.resistance)
+    return stats
+  }
+
+  function getActionTargets(
+    target: EffectTarget,
+    resolution: EffectResolution,
+    fieldOnly = false,
+  ): OwnedCard[] {
+    if (
+      fieldOnly &&
+      target.filter.zone &&
+      target.filter.zone !== 'field' &&
+      target.filter.zone !== 'any'
+    ) {
+      return []
+    }
+
+    const zone = fieldOnly ? 'field' : (target.filter.zone ?? 'field')
+    const candidates = getOwnedCards(zone).filter((candidate) =>
+      matchesTargetFilter(candidate, resolution.sourceOwnerIndex, target.filter),
+    )
+
+    if (target.selection === 'source') {
+      return candidates.filter(({ instance }) => instance.id === resolution.source.id)
+    }
+
+    if (target.selection === 'event') {
+      const event = resolution.event
+      return event.type === 'field'
+        ? candidates.filter(({ instance }) => instance.id === event.instance.id)
+        : []
+    }
+
+    return candidates
   }
 
   function createDeck(): CardInstance[] {
@@ -82,6 +273,271 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function triggerMatches(effect: CardEffect, event: FieldEvent, source: OwnedCard) {
+    const trigger = effect.trigger
+    if (trigger.type === 'continuous') {
+      return false
+    }
+
+    if (trigger.type === 'phase') {
+      return (
+        event.type === 'phase' &&
+        trigger.phase === event.phase &&
+        (trigger.turn === 'any' || source.ownerIndex === event.ownerIndex)
+      )
+    }
+
+    if (event.type !== 'field') {
+      return false
+    }
+
+    const isSourceEvent = source.instance.id === event.instance.id
+    if (trigger.type === 'enters-field') {
+      return event.transition === 'enters' && isSourceEvent
+    }
+
+    if (trigger.type === 'leaves-field') {
+      return event.transition === 'leaves' && isSourceEvent
+    }
+
+    const entering = trigger.type === 'other-enters-field'
+    if (
+      (entering && event.transition !== 'enters') ||
+      (!entering && event.transition !== 'leaves') ||
+      isSourceEvent
+    ) {
+      return false
+    }
+
+    return (
+      !trigger.filter ||
+      matchesTargetFilter(
+        { instance: event.instance, ownerIndex: event.ownerIndex, zone: 'field' },
+        source.ownerIndex,
+        trigger.filter,
+      )
+    )
+  }
+
+  function queueEffectEvent(event: FieldEvent) {
+    for (const source of getOwnedCards('field')) {
+      for (const effect of source.instance.card.effects ?? []) {
+        if (triggerMatches(effect, event, source)) {
+          effectQueue.push({
+            effect,
+            source: source.instance,
+            sourceOwnerIndex: source.ownerIndex,
+            event,
+            actionIndex: 0,
+          })
+        }
+      }
+    }
+  }
+
+  function removeFromField(ownerIndex: number, instance: CardInstance) {
+    const owner = players.value[ownerIndex]
+    const cardIndex = owner?.field.findIndex(({ id }) => id === instance.id) ?? -1
+    if (!owner || cardIndex < 0) {
+      return
+    }
+
+    queueEffectEvent({ type: 'field', transition: 'leaves', instance, ownerIndex })
+    owner.field.splice(cardIndex, 1)
+    owner.graveyard.push(instance)
+  }
+
+  function applyEffectAction(
+    action: CardEffectAction,
+    targets: OwnedCard[],
+    resolution: EffectResolution,
+  ) {
+    if (action.type === 'create-token') {
+      const count = action.count ?? 1
+      if (!Number.isInteger(count) || count < 1 || count > maxTokensPerEffect) {
+        throw new Error(
+          `Quantidade de fichas inválida no efeito de ${resolution.source.card.name}; o limite é ${maxTokensPerEffect}.`,
+        )
+      }
+
+      const owner = players.value[resolution.sourceOwnerIndex]
+      if (!owner) {
+        throw new Error(
+          `Dono inválido para ficha criada pelo efeito de ${resolution.source.card.name}.`,
+        )
+      }
+
+      for (let index = 0; index < count; index += 1) {
+        const token: CardInstance = {
+          id: nextCardId++,
+          card: action.card,
+          summonedOnTurn: turnNumber.value,
+          damage: 0,
+        }
+        owner.field.push(token)
+        queueEffectEvent({
+          type: 'field',
+          transition: 'enters',
+          instance: token,
+          ownerIndex: resolution.sourceOwnerIndex,
+        })
+      }
+      message.value = `${resolution.source.card.name} criou ${count} ficha(s).`
+      return
+    }
+
+    const affectedNames: string[] = []
+    for (const target of targets) {
+      if (action.type === 'modify') {
+        const modifier: CardStatModifier = {
+          power: action.power ?? 0,
+          resistance: action.resistance ?? 0,
+          cost: action.cost ?? 0,
+          duration: action.duration ?? 'permanent',
+        }
+        if (modifier.duration === 'end-of-turn') {
+          modifier.expiresAtTurn = turnNumber.value
+          modifier.expiresForPlayer = currentPlayerIndex.value
+        }
+        target.instance.modifiers = [...(target.instance.modifiers ?? []), modifier]
+        affectedNames.push(target.instance.card.name)
+      } else if (target.zone === 'field') {
+        removeFromField(target.ownerIndex, target.instance)
+        affectedNames.push(target.instance.card.name)
+      }
+    }
+
+    if (affectedNames.length && action.type === 'modify') {
+      message.value = `${resolution.source.card.name} modificou: ${affectedNames.join(', ')}.`
+    } else if (affectedNames.length && action.type === 'destroy') {
+      message.value = `${resolution.source.card.name} destruiu: ${affectedNames.join(', ')}.`
+    }
+
+    checkStateBasedActions()
+  }
+
+  function resolveEffectQueue() {
+    if (resolvingEffects || pendingEffectTarget.value) {
+      return
+    }
+
+    resolvingEffects = true
+    let resolvedActions = 0
+    try {
+      while (effectQueue.length && !pendingEffectTarget.value) {
+        const resolution = effectQueue[0]
+        if (!resolution) {
+          break
+        }
+
+        const action = resolution.effect.actions[resolution.actionIndex]
+        if (!action) {
+          effectQueue.shift()
+          continue
+        }
+
+        resolvedActions += 1
+        if (resolvedActions > maxEffectActionsPerResolution) {
+          throw new Error(
+            `Resolução de efeitos excedeu ${maxEffectActionsPerResolution} ações; verifique ciclos nos efeitos de cartas.`,
+          )
+        }
+
+        if (action.type === 'create-token') {
+          applyEffectAction(action, [], resolution)
+          resolution.actionIndex += 1
+          continue
+        }
+
+        const targets = getActionTargets(action.target, resolution, action.type === 'destroy')
+        if (action.target.selection === 'one' && targets.length > 1) {
+          pendingEffectTarget.value = {
+            sourceName: resolution.source.card.name,
+            candidates: targets,
+          }
+          message.value = `${resolution.source.card.name}: escolha um alvo para o efeito.`
+          break
+        }
+
+        applyEffectAction(
+          action,
+          action.target.selection === 'one' ? targets.slice(0, 1) : targets,
+          resolution,
+        )
+        resolution.actionIndex += 1
+      }
+    } finally {
+      resolvingEffects = false
+    }
+
+    if (!pendingEffectTarget.value && !effectQueue.length && pendingTurnStart) {
+      pendingTurnStart = false
+      finishTurnStart()
+    }
+  }
+
+  function finishTurnStart() {
+    const nextPlayer = currentPlayer.value
+    if (nextPlayer.hasTakenTurn) {
+      nextPlayer.maxMana += 1
+      nextPlayer.mana = nextPlayer.maxMana
+    } else {
+      nextPlayer.hasTakenTurn = true
+    }
+    message.value = `${nextPlayer.name} começou o turno com ${nextPlayer.maxMana} de mana.`
+    drawCards(nextPlayer, 1)
+    currentPhase.value = 'main-one'
+    queueEffectEvent({ type: 'phase', phase: 'main-one', ownerIndex: currentPlayerIndex.value })
+    resolveEffectQueue()
+  }
+
+  function chooseEffectTarget(instanceId: number) {
+    const pending = pendingEffectTarget.value
+    const resolution = effectQueue[0]
+    const action = resolution?.effect.actions[resolution.actionIndex]
+    const target = pending?.candidates.find(({ instance }) => instance.id === instanceId)
+
+    if (!pending || !resolution || !action || action.type === 'create-token' || !target) {
+      return false
+    }
+
+    applyEffectAction(action, [target], resolution)
+    resolution.actionIndex += 1
+    pendingEffectTarget.value = null
+    resolveEffectQueue()
+    return true
+  }
+
+  function checkStateBasedActions() {
+    if (checkingStateBasedActions) {
+      return
+    }
+
+    checkingStateBasedActions = true
+    try {
+      while (true) {
+        const defeated = getOwnedCards('field').filter(
+          ({ instance }) =>
+            isCreature(instance) &&
+            (instance.damage ?? 0) >= getEffectiveStats(instance).resistance,
+        )
+        if (!defeated.length) {
+          break
+        }
+
+        for (const { instance, ownerIndex } of defeated) {
+          removeFromField(ownerIndex, instance)
+        }
+        resolveEffectQueue()
+        if (pendingEffectTarget.value) {
+          break
+        }
+      }
+    } finally {
+      checkingStateBasedActions = false
+    }
+  }
+
   function startGame() {
     nextCardId = 0
     players.value = [
@@ -106,11 +562,18 @@ export const useGameStore = defineStore('game', () => {
     attackers.value = []
     blockers.value = {}
     damageAssignments.value = {}
+    pendingEffectTarget.value = null
+    effectQueue.length = 0
+    pendingTurnStart = false
     currentPhase.value = 'main-one'
   }
 
   function canPlay(card: CardInstance) {
-    return canPlayCards.value && currentPlayer.value.mana >= card.card.cost
+    return (
+      !pendingEffectTarget.value &&
+      canPlayCards.value &&
+      currentPlayer.value.mana >= getEffectiveStats(card).cost
+    )
   }
 
   function playCard(instance: CardInstance) {
@@ -121,12 +584,19 @@ export const useGameStore = defineStore('game', () => {
       return false
     }
 
-    player.mana -= instance.card.cost
+    player.mana -= getEffectiveStats(instance).cost
     instance.summonedOnTurn = turnNumber.value
     instance.damage = 0
     player.field.push(instance)
     player.hand.splice(cardIndex, 1)
     message.value = `${instance.card.name} entrou em campo.`
+    queueEffectEvent({
+      type: 'field',
+      transition: 'enters',
+      instance,
+      ownerIndex: currentPlayerIndex.value,
+    })
+    resolveEffectQueue()
     return true
   }
 
@@ -159,6 +629,10 @@ export const useGameStore = defineStore('game', () => {
   function endTurn() {
     const player = currentPlayer.value
 
+    if (pendingEffectTarget.value) {
+      return
+    }
+
     if (player.hand.length > 6) {
       isDiscarding.value = true
       message.value = `Descarte ${player.hand.length - 6} carta(s) para o cemitério antes de encerrar o turno.`
@@ -166,20 +640,26 @@ export const useGameStore = defineStore('game', () => {
     }
 
     isDiscarding.value = false
+    for (const { instance } of getOwnedCards()) {
+      instance.modifiers = (instance.modifiers ?? []).filter(
+        (modifier) =>
+          modifier.duration !== 'end-of-turn' ||
+          modifier.expiresAtTurn !== turnNumber.value ||
+          modifier.expiresForPlayer !== currentPlayerIndex.value,
+      )
+    }
+    checkStateBasedActions()
+    if (pendingEffectTarget.value) {
+      return
+    }
+
     currentPlayerIndex.value = 1 - currentPlayerIndex.value
     turnNumber.value += 1
     currentPhase.value = 'draw'
 
-    const nextPlayer = currentPlayer.value
-    if (nextPlayer.hasTakenTurn) {
-      nextPlayer.maxMana += 1
-      nextPlayer.mana = nextPlayer.maxMana
-    } else {
-      nextPlayer.hasTakenTurn = true
-    }
-    message.value = `${nextPlayer.name} começou o turno com ${nextPlayer.maxMana} de mana.`
-    drawCards(nextPlayer, 1)
-    currentPhase.value = 'main-one'
+    pendingTurnStart = true
+    queueEffectEvent({ type: 'phase', phase: 'draw', ownerIndex: currentPlayerIndex.value })
+    resolveEffectQueue()
   }
 
   function isCreature(instance: CardInstance) {
@@ -221,7 +701,11 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function declareAttack() {
-    if (currentPhase.value !== 'combat' || combatStep.value !== 'attack' || !attackers.value.length) {
+    if (
+      currentPhase.value !== 'combat' ||
+      combatStep.value !== 'attack' ||
+      !attackers.value.length
+    ) {
       return false
     }
 
@@ -233,12 +717,7 @@ export const useGameStore = defineStore('game', () => {
   function assignBlocker(defenderId: number, attackerId: number) {
     const defender = opponent.value.field.find(({ id }) => id === defenderId)
     const attacker = currentPlayer.value.field.find(({ id }) => id === attackerId)
-    if (
-      !defender ||
-      !attacker ||
-      !canBlock(defender) ||
-      !attackers.value.includes(attackerId)
-    ) {
+    if (!defender || !attacker || !canBlock(defender) || !attackers.value.includes(attackerId)) {
       return false
     }
 
@@ -252,7 +731,7 @@ export const useGameStore = defineStore('game', () => {
     const assignedBlockers = Object.entries(blockers.value)
       .filter(([, blockedAttackerId]) => Number(blockedAttackerId) === attackerId)
       .map(([id]) => Number(id))
-    const maxDamage = attacker?.card.attack ?? 0
+    const maxDamage = attacker ? getEffectiveStats(attacker).power : 0
     const otherAssignedDamage = Object.entries(damageAssignments.value[attackerId] ?? {})
       .filter(([id]) => Number(id) !== defenderId)
       .reduce((total, [, amount]) => total + amount, 0)
@@ -299,7 +778,7 @@ export const useGameStore = defineStore('game', () => {
         0,
       )
       const attacker = currentPlayer.value.field.find(({ id }) => id === attackerId)
-      return totalDamage === (attacker?.card.attack ?? 0)
+      return totalDamage === (attacker ? getEffectiveStats(attacker).power : 0)
     })
   })
 
@@ -316,9 +795,11 @@ export const useGameStore = defineStore('game', () => {
 
       const assignedBlockers = Object.entries(blockers.value)
         .filter(([, blockedAttackerId]) => Number(blockedAttackerId) === attackerId)
-        .map(([id]) => defendingPlayer.field.find(({ id: defenderId }) => defenderId === Number(id)))
+        .map(([id]) =>
+          defendingPlayer.field.find(({ id: defenderId }) => defenderId === Number(id)),
+        )
         .filter((defender): defender is CardInstance => defender !== undefined)
-      const attackDamage = attacker.card.attack ?? 0
+      const attackDamage = getEffectiveStats(attacker).power
 
       if (!assignedBlockers.length) {
         defendingPlayer.life -= attackDamage
@@ -330,13 +811,10 @@ export const useGameStore = defineStore('game', () => {
           assignedBlockers.length === 1
             ? attackDamage
             : (damageAssignments.value[attackerId]?.[defender.id] ?? 0)
-        damageByCard.set(
-          defender.id,
-          (damageByCard.get(defender.id) ?? 0) + damageToDefender,
-        )
+        damageByCard.set(defender.id, (damageByCard.get(defender.id) ?? 0) + damageToDefender)
         damageByCard.set(
           attacker.id,
-          (damageByCard.get(attacker.id) ?? 0) + (defender.card.attack ?? 0),
+          (damageByCard.get(attacker.id) ?? 0) + getEffectiveStats(defender).power,
         )
       }
     }
@@ -352,10 +830,12 @@ export const useGameStore = defineStore('game', () => {
       }
 
       creature.damage = (creature.damage ?? 0) + damage
-      if (creature.damage >= (creature.card.defense ?? 0)) {
+      if (creature.damage >= getEffectiveStats(creature).resistance) {
         defeated.push(creature.card.name)
-        owner.graveyard.push(creature)
-        owner.field.splice(cardIndex, 1)
+        removeFromField(
+          owner === player ? currentPlayerIndex.value : 1 - currentPlayerIndex.value,
+          creature,
+        )
       }
     }
 
@@ -368,6 +848,9 @@ export const useGameStore = defineStore('game', () => {
     message.value = defeated.length
       ? `Combate resolvido. Foram para o cemitério: ${defeated.join(', ')}.`
       : 'Combate resolvido.'
+    queueEffectEvent({ type: 'phase', phase: 'main-two', ownerIndex: currentPlayerIndex.value })
+    resolveEffectQueue()
+    checkStateBasedActions()
   }
 
   function declareDefenders() {
@@ -377,8 +860,9 @@ export const useGameStore = defineStore('game', () => {
 
     const hasMultipleBlockers = attackers.value.some(
       (attackerId) =>
-        Object.values(blockers.value).filter((blockedAttackerId) => blockedAttackerId === attackerId)
-          .length > 1,
+        Object.values(blockers.value).filter(
+          (blockedAttackerId) => blockedAttackerId === attackerId,
+        ).length > 1,
     )
 
     if (hasMultipleBlockers) {
@@ -417,6 +901,7 @@ export const useGameStore = defineStore('game', () => {
 
   function skipCombat() {
     if (
+      pendingEffectTarget.value ||
       currentPhase.value !== 'combat' ||
       combatStep.value !== 'attack' ||
       attackers.value.length
@@ -429,10 +914,16 @@ export const useGameStore = defineStore('game', () => {
     blockers.value = {}
     damageAssignments.value = {}
     message.value = 'Combate encerrado sem ataques.'
+    queueEffectEvent({ type: 'phase', phase: 'main-two', ownerIndex: currentPlayerIndex.value })
+    resolveEffectQueue()
     return true
   }
 
   function advancePhase() {
+    if (pendingEffectTarget.value) {
+      return
+    }
+
     if (currentPhase.value === 'end') {
       endTurn()
       return
@@ -441,10 +932,7 @@ export const useGameStore = defineStore('game', () => {
     const nextPhase = gamePhases[phaseIndex.value + 1]
 
     if (nextPhase) {
-      if (
-        nextPhase.id === 'combat' &&
-        !currentPlayer.value.field.some(canAttackThisTurn)
-      ) {
+      if (nextPhase.id === 'combat' && !currentPlayer.value.field.some(canAttackThisTurn)) {
         goToPhase('main-two')
         message.value = 'Combate pulado: não há criaturas aptas a atacar.'
         return
@@ -455,6 +943,10 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function canNavigateToPhase(phase: PhaseId) {
+    if (pendingEffectTarget.value) {
+      return false
+    }
+
     const targetIndex = gamePhases.findIndex(({ id }) => id === phase)
     if (currentPhase.value === 'draw') {
       return phase === 'main-one'
@@ -464,7 +956,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function goToPhase(phase: PhaseId) {
-    if (!canNavigateToPhase(phase)) {
+    if (pendingEffectTarget.value || !canNavigateToPhase(phase)) {
       return
     }
 
@@ -478,6 +970,8 @@ export const useGameStore = defineStore('game', () => {
       blockers.value = {}
       damageAssignments.value = {}
       message.value = 'Selecione as criaturas que atacarão o adversário.'
+      queueEffectEvent({ type: 'phase', phase, ownerIndex: currentPlayerIndex.value })
+      resolveEffectQueue()
       return
     }
 
@@ -487,10 +981,14 @@ export const useGameStore = defineStore('game', () => {
       blockers.value = {}
       damageAssignments.value = {}
       message.value = 'Combate pulado.'
+      queueEffectEvent({ type: 'phase', phase, ownerIndex: currentPlayerIndex.value })
+      resolveEffectQueue()
       return
     }
 
     message.value = ''
+    queueEffectEvent({ type: 'phase', phase, ownerIndex: currentPlayerIndex.value })
+    resolveEffectQueue()
   }
 
   return {
@@ -504,11 +1002,14 @@ export const useGameStore = defineStore('game', () => {
     attackers,
     blockers,
     damageAssignments,
+    pendingEffectTarget,
     canResolveCombat,
     currentPlayer,
     opponent,
     phaseIndex,
     canPlayCards,
+    getEffectiveStats,
+    chooseEffectTarget,
     phases: gamePhases,
     startGame,
     canPlay,

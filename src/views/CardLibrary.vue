@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import cards from '@/data/cards.json'
+import cards from '@/data/cards'
 import CardRenderer from '@/components/CardRenderer.vue'
 import { onMounted, onUnmounted, ref } from 'vue'
 

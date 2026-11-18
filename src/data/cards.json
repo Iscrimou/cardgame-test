@@ -34,7 +34,7 @@
         "defense": 3,
         "keywords": ["Atropelar"],
         "effect": "Sempre que Krohzus causar dano ao oponente, crie uma ficha de lobo 2/2 com Ameaçar.",
-        "inscription": "Sob minha liderança, a lua anuncia a caçada, o uivo decreta a guerra.",
+        "inscription": "Sob minha liderança, a lua anuncia a caçada, e o uivo decreta a guerra.",
         "image": "Gemini_Generated_Image_z97rclz97rclz97r.jpg",
         "rarity": 3
     },
@@ -62,7 +62,31 @@
         "effect": "Até o fim de cada turno, se você invocou um lobo de custo 4 ou mais, dê +2/+0 a essa criatura.",
         "inscription": "",
         "image": "Gemini_Generated_Image_x70csnx70csnx70c.jpg",
-        "rarity": 1
+        "rarity": 1,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "other-enters-field",
+                    "filter": {
+                        "controller": "you",
+                        "type": "Criatura",
+                        "subtype": "Lobo",
+                        "cost": { "min": 4 }
+                    }
+                },
+                "actions": [
+                    {
+                        "type": "modify",
+                        "target": {
+                            "selection": "source",
+                            "filter": {}
+                        },
+                        "power": 2,
+                        "duration": "end-of-turn"
+                    }
+                ]
+            }
+        ]
     },
     {
         "name": "LOBO DA FLORESTA",

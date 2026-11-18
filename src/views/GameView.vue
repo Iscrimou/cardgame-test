@@ -11,6 +11,7 @@ import type { CardInstance, PhaseId, PlayerState } from '@/types/game'
 const gameStore = useGameStore()
 const {
   currentPlayer,
+  currentPlayerIndex,
   opponent,
   currentPhase,
   turnNumber,
@@ -23,6 +24,7 @@ const {
   blockers,
   damageAssignments,
   canResolveCombat,
+  pendingEffectTarget,
 } = storeToRefs(gameStore)
 const {
   canPlay,
@@ -36,6 +38,8 @@ const {
   setCombatDamage,
   resolveCombat,
   skipCombat,
+  getEffectiveStats,
+  chooseEffectTarget,
 } = gameStore
 const phases = gameStore.phases
 
@@ -91,6 +95,12 @@ function assignedCombatDamage(attackerId: number) {
     (total, amount) => total + amount,
     0,
   )
+}
+
+function statColorClass(value: number, base: number) {
+  if (value > base) return 'text-emerald-300'
+  if (value < base) return 'text-red-400'
+  return 'text-slate-300'
 }
 
 function startGame() {
@@ -218,7 +228,19 @@ startGame()
             </div>
             <template v-if="instance.card.type.startsWith('Criatura')">
               <p class="mt-1 text-center text-xs text-slate-300">
-                Vida: {{ (instance.card.defense ?? 0) - (instance.damage ?? 0) }}/{{ instance.card.defense }}
+                Poder:
+                <span :class="statColorClass(getEffectiveStats(instance).power, instance.card.attack ?? 0)">
+                  {{ getEffectiveStats(instance).power }}
+                </span>
+                · Vida:
+                <span
+                  :class="statColorClass(
+                    getEffectiveStats(instance).resistance - (instance.damage ?? 0),
+                    instance.card.defense ?? 0,
+                  )"
+                >
+                  {{ getEffectiveStats(instance).resistance - (instance.damage ?? 0) }}
+                </span>
               </p>
               <button v-if="combatStep === 'defense' && canBlock(instance)" type="button"
                 class="mt-1 w-full rounded bg-sky-800 px-2 py-1 text-xs font-semibold hover:bg-sky-700"
@@ -270,7 +292,19 @@ startGame()
             </div>
             <template v-if="instance.card.type.startsWith('Criatura')">
               <p class="mt-1 text-center text-xs text-slate-300">
-                Vida: {{ (instance.card.defense ?? 0) - (instance.damage ?? 0) }}/{{ instance.card.defense }}
+                Poder:
+                <span :class="statColorClass(getEffectiveStats(instance).power, instance.card.attack ?? 0)">
+                  {{ getEffectiveStats(instance).power }}
+                </span>
+                · Vida:
+                <span
+                  :class="statColorClass(
+                    getEffectiveStats(instance).resistance - (instance.damage ?? 0),
+                    instance.card.defense ?? 0,
+                  )"
+                >
+                  {{ getEffectiveStats(instance).resistance - (instance.damage ?? 0) }}
+                </span>
               </p>
               <button v-if="combatStep === 'attack' && canAttack(instance)" type="button"
                 class="mt-1 w-full rounded px-2 py-1 text-xs font-semibold"
@@ -301,14 +335,14 @@ startGame()
           </p>
           <div v-for="group in damageAllocationGroups" :key="group.attacker.id" class="mt-4">
             <p class="text-sm font-semibold text-amber-200">
-              {{ group.attacker.card.name }} · {{ group.attacker.card.attack ?? 0 }} de dano
+              {{ group.attacker.card.name }} · {{ getEffectiveStats(group.attacker).power }} de dano
               (atribuído: {{ assignedCombatDamage(group.attacker.id) }})
             </p>
             <div class="mt-2 grid gap-2 sm:grid-cols-2">
               <label v-for="defender in group.defenders" :key="defender.id"
                 class="flex items-center justify-between gap-3 rounded-lg bg-slate-800 px-3 py-2 text-sm">
                 <span>{{ defender.card.name }}</span>
-                <input type="number" min="0" :max="group.attacker.card.attack ?? 0"
+                <input type="number" min="0" :max="getEffectiveStats(group.attacker).power"
                   :value="damageAssignments[group.attacker.id]?.[defender.id] ?? 0"
                   :aria-label="`Dano de ${group.attacker.card.name} em ${defender.card.name}`"
                   class="w-20 rounded bg-slate-950 px-2 py-1 text-right text-white"
@@ -326,17 +360,22 @@ startGame()
           <div v-for="instance in currentPlayer.hand" :key="instance.id" class="relative aspect-[5/7] w-32 sm:w-40">
             <button type="button"
               class="h-full w-full overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
-              :aria-label="`Selecionar ${instance.card.name}, custo ${instance.card.cost}`"
+              :aria-label="`Selecionar ${instance.card.name}, custo ${getEffectiveStats(instance).cost}`"
               :aria-pressed="selectedCardId === instance.id" @click="selectedCardId = instance.id">
               <CardRenderer :card="instance.card" />
             </button>
             <div v-if="selectedCardId === instance.id" class="absolute left-1/2 top-2 flex -translate-x-1/2 gap-2">
               <ZoomCardButton :card-name="instance.card.name" @click="zoomedCard = instance" />
-              <PlayCardButton v-if="canPlay(instance)" :card-name="instance.card.name" :cost="instance.card.cost"
+              <PlayCardButton v-if="canPlay(instance)" :card-name="instance.card.name"
+                :cost="getEffectiveStats(instance).cost"
                 @click="playCard(instance)" />
               <DiscardCardButton v-if="isDiscarding && currentPlayer.hand.length > 6" :card-name="instance.card.name"
                 @click="discardCard(instance)" />
             </div>
+            <span v-if="selectedCardId === instance.id"
+              class="absolute bottom-2 left-1/2 -translate-x-1/2 rounded bg-black/80 px-2 py-1 text-xs text-amber-200">
+              Custo efetivo: {{ getEffectiveStats(instance).cost }}
+            </span>
           </div>
         </div>
 
@@ -393,7 +432,9 @@ startGame()
           <button v-for="attacker in availableBlockTargets" :key="attacker.id" type="button"
             class="rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
             @click="selectBlockTarget(attacker.id)">
-            {{ attacker.card.name }} · {{ attacker.card.attack ?? 0 }}/{{ attacker.card.defense ?? 0 }}
+            {{ attacker.card.name }} · {{ getEffectiveStats(attacker).power }}/{{
+              getEffectiveStats(attacker).resistance
+            }}
           </button>
           <p v-if="!availableBlockTargets.length" class="text-sm text-slate-400">
             Não há atacantes para bloquear.
@@ -404,6 +445,24 @@ startGame()
           @click="defendingCardId = null">
           Cancelar
         </button>
+      </section>
+    </div>
+
+    <div v-if="pendingEffectTarget"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm" role="dialog"
+      aria-modal="true" aria-labelledby="effect-target-title">
+      <section class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <h2 id="effect-target-title" class="text-xl font-bold">Escolha um alvo</h2>
+        <p class="mt-1 text-sm text-slate-400">Efeito de {{ pendingEffectTarget.sourceName }}</p>
+        <div class="mt-4 flex flex-col gap-2">
+          <button v-for="candidate in pendingEffectTarget.candidates" :key="candidate.instance.id" type="button"
+            class="rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
+            @click="chooseEffectTarget(candidate.instance.id)">
+            {{ candidate.instance.card.name }} ·
+            {{ candidate.ownerIndex === currentPlayerIndex ? currentPlayer.name : opponent.name }} ·
+            {{ candidate.zone === 'field' ? 'Campo' : 'Mão' }}
+          </button>
+        </div>
       </section>
     </div>
 

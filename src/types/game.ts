@@ -1,10 +1,20 @@
-import type { Card } from '@/types/card'
+import type { Card, EffectPhase } from '@/types/card'
+
+export type CardStatModifier = {
+  power: number
+  resistance: number
+  cost: number
+  duration: 'permanent' | 'end-of-turn'
+  expiresAtTurn?: number
+  expiresForPlayer?: number
+}
 
 export type CardInstance = {
   id: number
   card: Card
   summonedOnTurn?: number
   damage?: number
+  modifiers?: CardStatModifier[]
 }
 
 export type PlayerState = {
@@ -19,4 +29,4 @@ export type PlayerState = {
   hasTakenTurn: boolean
 }
 
-export type PhaseId = 'draw' | 'main-one' | 'combat' | 'main-two' | 'end'
+export type PhaseId = EffectPhase

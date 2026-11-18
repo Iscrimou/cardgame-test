@@ -40,3 +40,43 @@ npm run dev
 ```sh
 npm run build
 ```
+
+### Testes
+
+```sh
+npm test
+```
+
+### Efeitos de cartas
+
+O campo `effect` em `src/data/cards.json` é o texto exibido na carta. Para comportamento executável, use o campo opcional `effects`, composto por gatilhos e ações declarativos. Exemplo:
+
+```json
+{
+  "trigger": {
+    "type": "other-enters-field",
+    "filter": {
+      "controller": "you",
+      "type": "Criatura",
+      "subtype": "Lobo",
+      "cost": { "min": 4 }
+    }
+  },
+  "actions": [
+    {
+      "type": "modify",
+      "target": { "selection": "source", "filter": {} },
+      "power": 2,
+      "duration": "end-of-turn"
+    }
+  ]
+}
+```
+
+Gatilhos disponíveis: `enters-field`, `leaves-field`, `other-enters-field`, `other-leaves-field`, `phase` e `continuous`. Fases usam os IDs `draw`, `main-one`, `combat`, `main-two` e `end`; gatilhos de fase pertencem ao turno do controlador por padrão (`turn: "any"` os executa em ambos os turnos).
+
+Filtros aceitam `controller` (`you`, `opponent`, `any`), `zone` (`field`, `hand`, `any`), `type` (prefixo), `subtype` e `cost`, `power` ou `resistance` (valor exato ou intervalo `{ "min": n, "max": n }`). Custo é comparado ao valor impresso; poder e resistência consideram os valores efetivos no momento da seleção. Alvos contínuos são avaliados em sequência, usando os bônus contínuos já aplicados nessa avaliação.
+
+Ações suportadas: `modify` (alterações numéricas; duração `permanent` ou `end-of-turn`), `create-token` (com uma definição completa de carta) e `destroy`. Alvos de `modify` e `destroy` usam `selection`: `source`, `event`, `one` ou `all`; `one` abre uma escolha quando há mais de um alvo válido e não faz nada quando não há alvos. Efeitos que ainda não têm uma ação ou gatilho estruturado continuam sendo apenas texto.
+
+Efeitos `continuous` usam ações `modify` e permanecem ativos enquanto a fonte estiver em campo. Modificadores temporários expiram ao final do turno ativo em que foram aplicados. A resolução encadeada de efeitos tem um limite de segurança para interromper ciclos acidentais.
