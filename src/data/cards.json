@@ -129,7 +129,7 @@
         "attack": 3,
         "defense": 2,
         "keywords": ["Flash"],
-        "effect": "Quando essa criatura entra no campo de batalha, coloque um contador -1/-1 em até duas criaturas alvo.",
+        "effect": "Quando essa criatura entra no campo de batalha, você pode colocar um contador -1/-1 em até duas criaturas alvo.",
         "inscription": "As vítimas não viram nem ouviram, também, nem poderiam.",
         "image": "Gemini_Generated_Image_ohuqlaohuqlaohuq.jpg",
         "rarity": 1

@@ -25,10 +25,6 @@ const imageHref = computed(() => {
 const typeLine = computed(() => `${props.card.type} — ${props.card.subtype}`)
 const keywordsText = computed(() => props.card.keywords.join(' · '))
 const rarityColor = computed(() => {
-  if (props.card.rarity === undefined) {
-    return null
-  }
-
   const rarity = rarities.find(({ id }) => id === props.card.rarity)
 
   if (!rarity) {
@@ -359,7 +355,7 @@ const rarityColor = computed(() => {
         stroke="#000000"
         stroke-width="2"
       />
-      <circle v-if="rarityColor" cx="375" cy="935" r="4" :fill="rarityColor" />
+      <circle cx="375" cy="935" r="4" :fill="rarityColor" />
     </g>
   </svg>
 </template>
