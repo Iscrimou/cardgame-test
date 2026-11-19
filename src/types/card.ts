@@ -15,6 +15,7 @@ export type CardTargetFilter = {
 export type EffectTarget = {
   filter: CardTargetFilter
   selection: 'source' | 'event' | 'one' | 'all'
+  players?: 'any'
 }
 
 export type CardEffectTrigger =
@@ -36,6 +37,7 @@ export type CardEffectAction =
     }
   | { type: 'create-token'; card: Card; count?: number }
   | { type: 'destroy'; target: EffectTarget }
+  | { type: 'damage'; target: EffectTarget; amount: number }
 
 type ContinuousEffectAction = Omit<
   Extract<CardEffectAction, { type: 'modify' }>,
@@ -65,6 +67,6 @@ export type Card = {
   effect: string
   inscription: string
   image: string
-  rarity: number
+  rarity?: number
   effects?: CardEffect[]
 }

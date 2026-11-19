@@ -23,7 +23,27 @@
         "effect": "Quando essa criatura entra no campo de batalha, ele causa 2 pontos de dano a qualquer alvo.",
         "inscription": "Não pense que viverá muito após ouvir o uivo.",
         "image": "Gemini_Generated_Image_j8thtdj8thtdj8th.jpg",
-        "rarity": 2
+        "rarity": 2,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "enters-field"
+                },
+                "actions": [
+                    {
+                        "type": "damage",
+                        "target": {
+                            "selection": "one",
+                            "filter": {
+                                "type": "Criatura"
+                            },
+                            "players": "any"
+                        },
+                        "amount": 2
+                    }
+                ]
+            }
+        ]
     },
     {
         "name": "KROHZUS, GENERAL DA MATILHA",
@@ -136,6 +156,17 @@
         "inscription": "",
         "image": "Gemini_Generated_Image_1mtb1q1mtb1q1mtb.jpg",
         "rarity": 2
+    },
+    {
+        "name": "LOBO",
+        "type": "Criatura Token",
+        "subtype": "Lobo",
+        "attack": 2,
+        "defense": 2,
+        "keywords": [],
+        "effect": "",
+        "inscription": "",
+        "image": "Gemini_Generated_Image_ke8vrpke8vrpke8v.jpg"
     }
 
 ]

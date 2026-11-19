@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 750 1050" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente de Fundo Profundo e Sombrio -->
+    <radialGradient id="bgGradient" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#1c1d22"/>
+      <stop offset="55%" stop-color="#0d0e11"/>
+      <stop offset="100%" stop-color="#030405"/>
+    </radialGradient>
+
+    <!-- Metal Gótico / Prata Envelhecida Obscura -->
+    <linearGradient id="darkMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2c3038"/>
+      <stop offset="25%" stop-color="#5a6270"/>
+      <stop offset="50%" stop-color="#1e2126"/>
+      <stop offset="75%" stop-color="#404652"/>
+      <stop offset="100%" stop-color="#0f1114"/>
+    </linearGradient>
+
+    <!-- Borda Secundária de Ferro Batido -->
+    <linearGradient id="ironBorder" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f232a"/>
+      <stop offset="50%" stop-color="#0d0e12"/>
+      <stop offset="100%" stop-color="#181a20"/>
+    </linearGradient>
+
+    <!-- Pergaminho Decrépito / Queimado -->
+    <linearGradient id="darkScroll" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a39379"/>
+      <stop offset="30%" stop-color="#80715b"/>
+      <stop offset="70%" stop-color="#594c3b"/>
+      <stop offset="100%" stop-color="#30271c"/>
+    </linearGradient>
+
+    <!-- Ataque (Lâmina / Sangue Seco) -->
+    <radialGradient id="atkGlow" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#8a1c1c"/>
+      <stop offset="50%" stop-color="#4a0808"/>
+      <stop offset="90%" stop-color="#1a0000"/>
+      <stop offset="100%" stop-color="#050000"/>
+    </radialGradient>
+
+    <!-- Resistência (Aço Forjado Obscuro) -->
+    <radialGradient id="defGlow" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#4a5568"/>
+      <stop offset="50%" stop-color="#2d3748"/>
+      <stop offset="90%" stop-color="#1a202c"/>
+      <stop offset="100%" stop-color="#090d12"/>
+    </radialGradient>
+
+    <!-- Filtro de Sombra Densa / Projeção Obscura -->
+    <filter id="heavyShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#000000" flood-opacity="0.95"/>
+    </filter>
+
+    <!-- Vignette Interna para a Moldura da Arte -->
+    <radialGradient id="artVignette" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.8"/>
+    </radialGradient>
+
+    <!-- Clip Path para enquadrar perfeitamente a imagem na área do avatar -->
+    <clipPath id="avatarClip">
+      <rect x="86" y="166" width="578" height="428" rx="4"/>
+    </clipPath>
+  </defs>
+
+  <style>
+    .card-title { font-family: 'Cinzel', 'Georgia', 'Times New Roman', serif; font-weight: bold; fill: #100b07; font-size: 18px; letter-spacing: 0.5px; }
+    .card-type { font-family: 'Cinzel', 'Georgia', 'Times New Roman', serif; font-weight: 600; fill: #d1c7bd; font-size: 16px; letter-spacing: 1px; }
+    .card-keyword { font-family: 'Georgia', 'Times New Roman', serif; font-weight: bold; fill: #3b0d08; font-size: 20px; }
+    .card-body { font-family: 'Georgia', 'Times New Roman', serif; fill: #1c1610; font-size: 19px; line-height: 1.35; }
+    .card-flavor { font-family: 'Georgia', 'Times New Roman', serif; font-style: italic; fill: #f0e0ce; font-size: 16px; }
+    .stat-text { font-family: 'Impact', 'Arial Black', sans-serif; font-weight: bold; fill: #f0e6d2; font-size: 42px; text-anchor: middle; dominant-baseline: central; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.9)); }
+    .cost-text { font-family: 'Impact', 'Arial Black', sans-serif; font-weight: bold; fill: #ffffff; font-size: 48px; text-anchor: middle; dominant-baseline: central; filter: drop-shadow(0px 0px 8px rgba(0,0,0,0.9)); }
+  </style>
+
+  <!-- ================= FUNDO E MOLDURA DA CARTA ================= -->
+  <!-- Corpo Principal do Card -->
+  <rect x="25" y="25" width="700" height="1000" rx="36" fill="url(#bgGradient)" stroke="#050507" stroke-width="10"/>
+
+  <!-- Moldura Externa de Metal Gótico -->
+  <rect x="48" y="48" width="654" height="954" rx="26" fill="none" stroke="url(#darkMetal)" stroke-width="12" filter="url(#heavyShadow)"/>
+  
+  <!-- Linha de Contorno de Ferro Interno -->
+  <rect x="64" y="64" width="622" height="922" rx="18" fill="none" stroke="url(#ironBorder)" stroke-width="4"/>
+
+  <!-- Cantoneiras Ornamentais Rústicas -->
+  <g fill="url(#darkMetal)">
+    <path d="M 64,120 L 120,64 L 95,64 L 64,95 Z"/>
+    <circle cx="92" cy="92" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+    <path d="M 686,120 L 630,64 L 655,64 L 686,95 Z"/>
+    <circle cx="658" cy="92" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+    <path d="M 64,930 L 120,986 L 95,986 L 64,955 Z"/>
+    <circle cx="92" cy="958" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+    <path d="M 686,930 L 630,986 L 655,986 L 686,955 Z"/>
+    <circle cx="658" cy="958" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5"/>
+  </g>
+
+  <!-- ================= ARTE DA CARTA (GUERREIRO CELTA) ================= -->
+  <g id="Avatar-Frame">
+    <!-- Moldura Sombria do Avatar -->
+    <rect x="80" y="160" width="590" height="440" rx="8" fill="#050608" stroke="url(#darkMetal)" stroke-width="6" filter="url(#heavyShadow)"/>
+    
+    <!-- Imagem do Guerreiro Enquadrada -->
+    <g clip-path="url(#avatarClip)">
+      <image xlink:href="Gemini_Generated_Image_bfktm3bfktm3bfkt.jpg" x="80" y="160" width="590" height="440" preserveAspectRatio="xMidYMin slice" />
+    </g>
+
+    <!-- Vignette de Profundidade nas Bordas da Arte -->
+    <rect x="86" y="166" width="578" height="428" rx="4" fill="url(#artVignette)" pointer-events="none"/>
+    <rect x="86" y="166" width="578" height="428" rx="4" fill="none" stroke="#000000" stroke-width="6" opacity="0.8" pointer-events="none"/>
+  </g>
+
+  <!-- Barra de Tipo da Carta -->
+  <g id="Type-Bar" filter="url(#heavyShadow)">
+    <path d="M 150,580 L 600,580 L 580,612 L 170,612 Z" fill="#121418" stroke="url(#darkMetal)" stroke-width="2.5"/>
+    <text x="375" y="601" text-anchor="middle" class="card-type">Criatura Lendária — Guerreiro Celta</text>
+  </g>
+
+  <!-- ================= PERGAMINHO E TEXTOS DA CARTA ================= -->
+  <g id="Scroll-Area" filter="url(#heavyShadow)">
+    <!-- Pergaminho Base -->
+    <path d="M 90,635 
+             Q 375,628 660,635 
+             Q 672,750 660,865 
+             Q 375,875 90,865 
+             Q 78,750 90,635 Z" 
+          fill="url(#darkScroll)" 
+          stroke="#1f1810" 
+          stroke-width="5" />
+
+    <!-- Detalhes de Textura do Pergaminho -->
+    <path d="M 90,635 Q 375,645 660,635" fill="none" stroke="#120e0a" stroke-width="3" opacity="0.7"/>
+    <path d="M 90,865 Q 375,855 660,865" fill="none" stroke="#120e0a" stroke-width="3" opacity="0.7"/>
+
+    <!-- Hastes Metálicas -->
+    <path d="M 75,632 C 75,620 110,615 375,615 C 640,615 675,620 675,632 C 675,640 640,638 375,638 C 110,638 75,640 75,632 Z" fill="url(#ironBorder)" stroke="url(#darkMetal)" stroke-width="2"/>
+    <path d="M 75,868 C 75,858 110,860 375,860 C 640,860 675,858 675,868 C 675,880 640,882 375,882 C 110,882 75,880 75,868 Z" fill="url(#ironBorder)" stroke="url(#darkMetal)" stroke-width="2"/>
+
+    <!-- CONTEÚDO DE TEXTO -->
+    <!-- Palavra-chave -->
+    <text x="120" y="672" class="card-keyword">Iniciativa</text>
+
+    <!-- Efeito da Carta -->
+    <text x="120" y="705" class="card-body">
+      <tspan x="120" dy="0">Aengus entra no campo de batalha com +X/+X,</tspan>
+      <tspan x="120" dy="25">onde X é o número de criaturas celtas que</tspan>
+      <tspan x="120" dy="25">você controla.</tspan>
+    </text>
+    
+  </g>
+
+  <!-- ================= NOME DA CARTA ================= -->
+  <g id="Header-Banner" filter="url(#heavyShadow)">
+    <path d="M 115,80 
+             L 635,80 
+             L 655,115 
+             L 635,150 
+             L 115,150 
+             L 95,115 Z" 
+          fill="url(#darkScroll)" 
+          stroke="#1f1810" 
+          stroke-width="4"/>
+    
+    <path d="M 115,80 L 135,115 L 115,150 Z" fill="#1d1711" stroke="#0a0805" stroke-width="2"/>
+    <path d="M 635,80 L 615,115 L 635,150 Z" fill="#1d1711" stroke="#0a0805" stroke-width="2"/>
+
+    <rect x="140" y="90" width="470" height="50" rx="3" fill="none" stroke="url(#darkMetal)" stroke-width="2" opacity="0.8"/>
+
+    <!-- Texto do Título -->
+    <text x="375" y="123" text-anchor="middle" class="card-title">AENGUS, DESCENDENTE DE CATHUBODUA</text>
+  </g>
+
+  <!-- ================= ATAQUE E RESISTÊNCIA ================= -->
+  <!-- MARCADOR DE ATAQUE -->
+  <g id="Attack-Stat" filter="url(#heavyShadow)">
+    <path d="M 55,875 L 145,875 L 155,935 L 100,995 L 45,935 Z" fill="url(#darkMetal)" stroke="#000000" stroke-width="5"/>
+    <path d="M 63,883 L 137,883 L 145,930 L 100,982 L 55,930 Z" fill="url(#atkGlow)" stroke="#1a0000" stroke-width="2.5"/>
+    <!-- Valor de Ataque -->
+    <text x="100" y="935" class="stat-text">3</text>
+  </g>
+
+  <!-- MARCADOR DE RESISTÊNCIA -->
+  <g id="Defense-Stat" filter="url(#heavyShadow)">
+    <path d="M 605,875 L 695,875 L 705,935 L 650,995 L 595,935 Z" fill="url(#darkMetal)" stroke="#000000" stroke-width="5"/>
+    <path d="M 613,883 L 687,883 L 695,930 L 650,982 L 605,930 Z" fill="url(#defGlow)" stroke="#080c12" stroke-width="2.5"/>
+    <!-- Valor de Resistência -->
+    <text x="650" y="935" class="stat-text">3</text>
+  </g>
+
+</svg>

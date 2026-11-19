@@ -31,6 +31,7 @@ type OwnedCard = {
 type PendingTarget = {
   sourceName: string
   candidates: OwnedCard[]
+  playerCandidates: number[]
 }
 
 type EffectiveStats = {
@@ -351,6 +352,7 @@ export const useGameStore = defineStore('game', () => {
     action: CardEffectAction,
     targets: OwnedCard[],
     resolution: EffectResolution,
+    targetPlayerIndex?: number,
   ) {
     if (action.type === 'create-token') {
       const count = action.count ?? 1
@@ -383,6 +385,29 @@ export const useGameStore = defineStore('game', () => {
         })
       }
       message.value = `${resolution.source.card.name} criou ${count} ficha(s).`
+      return
+    }
+
+    if (action.type === 'damage') {
+      if (targetPlayerIndex !== undefined) {
+        const targetPlayer = players.value[targetPlayerIndex]
+        if (!targetPlayer) {
+          throw new Error(
+            `Dono inválido para alvo do efeito de ${resolution.source.card.name}.`,
+          )
+        }
+        targetPlayer.life -= action.amount
+        message.value = `${resolution.source.card.name} causou ${action.amount} de dano a ${targetPlayer.name}.`
+      } else {
+        for (const { instance } of targets) {
+          instance.damage = (instance.damage ?? 0) + action.amount
+        }
+        if (targets.length) {
+          message.value = `${resolution.source.card.name} causou ${action.amount} de dano a ${targets[0]?.instance.card.name}.`
+        }
+      }
+
+      checkStateBasedActions()
       return
     }
 
@@ -450,20 +475,29 @@ export const useGameStore = defineStore('game', () => {
         }
 
         const targets = getActionTargets(action.target, resolution, action.type === 'destroy')
-        if (action.target.selection === 'one' && targets.length > 1) {
+        const playerCandidates =
+          action.type === 'damage' && action.target.players === 'any'
+            ? players.value.map((_, ownerIndex) => ownerIndex)
+            : []
+        if (action.target.selection === 'one' && targets.length + playerCandidates.length > 1) {
           pendingEffectTarget.value = {
             sourceName: resolution.source.card.name,
             candidates: targets,
+            playerCandidates,
           }
           message.value = `${resolution.source.card.name}: escolha um alvo para o efeito.`
           break
         }
 
-        applyEffectAction(
-          action,
-          action.target.selection === 'one' ? targets.slice(0, 1) : targets,
-          resolution,
-        )
+        if (action.type === 'damage' && playerCandidates.length === 1 && targets.length === 0) {
+          applyEffectAction(action, [], resolution, playerCandidates[0])
+        } else {
+          applyEffectAction(
+            action,
+            action.target.selection === 'one' ? targets.slice(0, 1) : targets,
+            resolution,
+          )
+        }
         resolution.actionIndex += 1
       }
     } finally {
@@ -502,6 +536,27 @@ export const useGameStore = defineStore('game', () => {
     }
 
     applyEffectAction(action, [target], resolution)
+    resolution.actionIndex += 1
+    pendingEffectTarget.value = null
+    resolveEffectQueue()
+    return true
+  }
+
+  function chooseEffectPlayerTarget(ownerIndex: number) {
+    const pending = pendingEffectTarget.value
+    const resolution = effectQueue[0]
+    const action = resolution?.effect.actions[resolution.actionIndex]
+
+    if (
+      !pending ||
+      !resolution ||
+      action?.type !== 'damage' ||
+      !pending.playerCandidates.includes(ownerIndex)
+    ) {
+      return false
+    }
+
+    applyEffectAction(action, [], resolution, ownerIndex)
     resolution.actionIndex += 1
     pendingEffectTarget.value = null
     resolveEffectQueue()
@@ -1010,6 +1065,7 @@ export const useGameStore = defineStore('game', () => {
     canPlayCards,
     getEffectiveStats,
     chooseEffectTarget,
+    chooseEffectPlayerTarget,
     phases: gamePhases,
     startGame,
     canPlay,

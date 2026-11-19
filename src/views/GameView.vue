@@ -40,6 +40,7 @@ const {
   skipCombat,
   getEffectiveStats,
   chooseEffectTarget,
+  chooseEffectPlayerTarget,
 } = gameStore
 const phases = gameStore.phases
 
@@ -461,6 +462,11 @@ startGame()
             {{ candidate.instance.card.name }} ·
             {{ candidate.ownerIndex === currentPlayerIndex ? currentPlayer.name : opponent.name }} ·
             {{ candidate.zone === 'field' ? 'Campo' : 'Mão' }}
+          </button>
+          <button v-for="ownerIndex in pendingEffectTarget.playerCandidates" :key="`player-${ownerIndex}`"
+            type="button" class="rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
+            @click="chooseEffectPlayerTarget(ownerIndex)">
+            {{ ownerIndex === currentPlayerIndex ? currentPlayer.name : opponent.name }} · Jogador
           </button>
         </div>
       </section>

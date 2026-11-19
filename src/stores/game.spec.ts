@@ -44,6 +44,42 @@ describe('efeitos de cartas', () => {
     setActivePinia(createPinia())
   })
 
+  it('causa dano ao jogador escolhido quando o Lobo Sangrento entra em campo', () => {
+    const game = createGame()
+    const bloodyWolf = cards.find(({ name }) => name === 'LOBO SANGRENTO CAMINHANTE')
+    if (!bloodyWolf) {
+      throw new Error('Carta de teste Lobo Sangrento Caminhante ausente.')
+    }
+
+    const source = makeInstance(120, bloodyWolf)
+    game.players[0].hand.push(source)
+
+    expect(game.playCard(source)).toBe(true)
+    expect(game.pendingEffectTarget?.playerCandidates).toEqual([0, 1])
+    expect(game.players[1].life).toBe(30)
+    expect(game.chooseEffectPlayerTarget(1)).toBe(true)
+    expect(game.players[1].life).toBe(28)
+    expect(game.pendingEffectTarget).toBeNull()
+  })
+
+  it('aplica o dano do Lobo Sangrento à criatura alvo', () => {
+    const game = createGame()
+    const bloodyWolf = cards.find(({ name }) => name === 'LOBO SANGRENTO CAMINHANTE')
+    if (!bloodyWolf) {
+      throw new Error('Carta de teste Lobo Sangrento Caminhante ausente.')
+    }
+
+    const source = makeInstance(121, bloodyWolf)
+    const target = makeInstance(122, makeCard({ name: 'Alvo', defense: 4 }))
+    game.players[0].hand.push(source)
+    game.players[1].field.push(target)
+
+    expect(game.playCard(source)).toBe(true)
+    expect(game.chooseEffectTarget(target.id)).toBe(true)
+    expect(target.damage).toBe(2)
+    expect(game.players[1].field.some(({ id }) => id === target.id)).toBe(true)
+  })
+
   it('aplica e expira o bônus condicional da Presa de Prata', () => {
     const game = createGame()
     const silverFang = cards.find(({ name }) => name === 'PRESA DE PRATA')
