@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import CardRenderer from '@/components/CardRenderer.vue'
+import InGameCardRenderer from '@/components/InGameCardRenderer.vue'
 import DiscardCardButton from '@/components/game/DiscardCardButton.vue'
 import PlayCardButton from '@/components/game/PlayCardButton.vue'
 import ZoomCardButton from '@/components/game/ZoomCardButton.vue'
@@ -96,12 +97,6 @@ function assignedCombatDamage(attackerId: number) {
     (total, amount) => total + amount,
     0,
   )
-}
-
-function statColorClass(value: number, base: number) {
-  if (value > base) return 'text-emerald-300'
-  if (value < base) return 'text-red-400'
-  return 'text-slate-300'
 }
 
 function startGame() {
@@ -224,25 +219,15 @@ startGame()
         </div>
         <div class="mt-4 flex min-h-32 flex-wrap justify-center gap-3">
           <div v-for="instance in opponent.field" :key="instance.id" class="w-24 sm:w-32">
-            <div class="aspect-[5/7] overflow-hidden rounded-lg">
-              <CardRenderer :card="instance.card" />
+            <div class="relative aspect-[5/7] overflow-hidden rounded-lg">
+              <InGameCardRenderer :instance="instance" zone="field" />
+              <ZoomCardButton
+                class="absolute right-1 top-1 z-10 scale-75 origin-top-right"
+                :card-name="instance.card.name"
+                @click="zoomedCard = instance"
+              />
             </div>
             <template v-if="instance.card.type.startsWith('Criatura')">
-              <p class="mt-1 text-center text-xs text-slate-300">
-                Poder:
-                <span :class="statColorClass(getEffectiveStats(instance).power, instance.card.attack ?? 0)">
-                  {{ getEffectiveStats(instance).power }}
-                </span>
-                · Vida:
-                <span
-                  :class="statColorClass(
-                    getEffectiveStats(instance).resistance - (instance.damage ?? 0),
-                    instance.card.defense ?? 0,
-                  )"
-                >
-                  {{ getEffectiveStats(instance).resistance - (instance.damage ?? 0) }}
-                </span>
-              </p>
               <button v-if="combatStep === 'defense' && canBlock(instance)" type="button"
                 class="mt-1 w-full rounded bg-sky-800 px-2 py-1 text-xs font-semibold hover:bg-sky-700"
                 @click="openBlockerChoice(instance)">
@@ -288,25 +273,15 @@ startGame()
 
         <div class="mt-4 flex min-h-40 flex-wrap justify-center gap-3 rounded-xl bg-black/20 p-3">
           <div v-for="instance in currentPlayer.field" :key="instance.id" class="w-24 sm:w-32">
-            <div class="aspect-[5/7] overflow-hidden rounded-lg">
-              <CardRenderer :card="instance.card" />
+            <div class="relative aspect-[5/7] overflow-hidden rounded-lg">
+              <InGameCardRenderer :instance="instance" zone="field" />
+              <ZoomCardButton
+                class="absolute right-1 top-1 z-10 scale-75 origin-top-right"
+                :card-name="instance.card.name"
+                @click="zoomedCard = instance"
+              />
             </div>
             <template v-if="instance.card.type.startsWith('Criatura')">
-              <p class="mt-1 text-center text-xs text-slate-300">
-                Poder:
-                <span :class="statColorClass(getEffectiveStats(instance).power, instance.card.attack ?? 0)">
-                  {{ getEffectiveStats(instance).power }}
-                </span>
-                · Vida:
-                <span
-                  :class="statColorClass(
-                    getEffectiveStats(instance).resistance - (instance.damage ?? 0),
-                    instance.card.defense ?? 0,
-                  )"
-                >
-                  {{ getEffectiveStats(instance).resistance - (instance.damage ?? 0) }}
-                </span>
-              </p>
               <button v-if="combatStep === 'attack' && canAttack(instance)" type="button"
                 class="mt-1 w-full rounded px-2 py-1 text-xs font-semibold"
                 :class="attackers.includes(instance.id)
@@ -363,7 +338,7 @@ startGame()
               class="h-full w-full overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               :aria-label="`Selecionar ${instance.card.name}, custo ${getEffectiveStats(instance).cost}`"
               :aria-pressed="selectedCardId === instance.id" @click="selectedCardId = instance.id">
-              <CardRenderer :card="instance.card" />
+              <InGameCardRenderer :instance="instance" zone="hand" />
             </button>
             <div v-if="selectedCardId === instance.id" class="absolute left-1/2 top-2 flex -translate-x-1/2 gap-2">
               <ZoomCardButton :card-name="instance.card.name" @click="zoomedCard = instance" />
@@ -373,10 +348,6 @@ startGame()
               <DiscardCardButton v-if="isDiscarding && currentPlayer.hand.length > 6" :card-name="instance.card.name"
                 @click="discardCard(instance)" />
             </div>
-            <span v-if="selectedCardId === instance.id"
-              class="absolute bottom-2 left-1/2 -translate-x-1/2 rounded bg-black/80 px-2 py-1 text-xs text-amber-200">
-              Custo efetivo: {{ getEffectiveStats(instance).cost }}
-            </span>
           </div>
         </div>
 
@@ -510,7 +481,8 @@ startGame()
               <p class="truncate text-sm font-semibold text-white">{{ instance.card.name }}</p>
               <p class="truncate text-xs text-slate-400">{{ instance.card.type }}</p>
             </div>
-            <span class="shrink-0 rounded-full bg-slate-700 px-2 py-1 text-xs text-amber-200">
+            <span v-if="instance.card.cost !== undefined"
+              class="shrink-0 rounded-full bg-slate-700 px-2 py-1 text-xs text-amber-200">
               {{ instance.card.cost }} mana
             </span>
           </li>

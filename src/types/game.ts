@@ -9,12 +9,17 @@ export type CardStatModifier = {
   expiresForPlayer?: number
 }
 
+export type CardCounterType = '+1/+1' | '-1/-1'
+export type CardCounters = Partial<Record<CardCounterType, number>>
+export type CardCounterDisplay = { type: CardCounterType; count: number }
+
 export type CardInstance = {
   id: number
   card: Card
   summonedOnTurn?: number
   damage?: number
   modifiers?: CardStatModifier[]
+  counters?: CardCounters
 }
 
 export type PlayerState = {

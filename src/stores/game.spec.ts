@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import cards from '@/data/cards'
 import type { Card, CardEffect } from '@/types/card'
+import type { CardInstance } from '@/types/game'
 import { useGameStore } from '@/stores/game'
 
 const cardTemplate: Card = {
@@ -22,7 +23,7 @@ function makeCard(overrides: Partial<Card> = {}): Card {
   return { ...cardTemplate, ...overrides }
 }
 
-function makeInstance(id: number, card: Card) {
+function makeInstance(id: number, card: Card): CardInstance {
   return { id, card, damage: 0 }
 }
 
@@ -137,6 +138,28 @@ describe('efeitos de cartas', () => {
 
     expect(game.getEffectiveStats(friendlyWolf)).toMatchObject({ power: 3, resistance: 3 })
     expect(game.getEffectiveStats(enemyWolf)).toMatchObject({ power: 2, resistance: 2 })
+  })
+
+  it('inclui contadores +1/+1 e -1/-1 nos atributos efetivos', () => {
+    const game = createGame()
+    const creature = makeInstance(123, makeCard({ attack: 3, defense: 4 }))
+    creature.counters = { '+1/+1': 2, '-1/-1': 1 }
+    game.players[0].field.push(creature)
+
+    expect(game.getEffectiveStats(creature)).toMatchObject({ power: 4, resistance: 5 })
+  })
+
+  it('trata ficha sem custo como custo efetivo zero', () => {
+    const game = createGame()
+    const tokenCard = cards.find(({ type }) => type === 'Criatura Token')
+    if (!tokenCard) {
+      throw new Error('Carta de teste de criatura token ausente.')
+    }
+
+    const token = makeInstance(124, tokenCard)
+    game.players[0].field.push(token)
+
+    expect(game.getEffectiveStats(token)).toMatchObject({ cost: 0, power: 2, resistance: 2 })
   })
 
   it('aplica reduções de custo a cartas na mão e usa o custo efetivo ao jogar', () => {

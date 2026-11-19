@@ -60,7 +60,7 @@ export type Card = {
   name: string
   type: string
   subtype?: string
-  cost: number
+  cost?: number
   attack?: number
   defense?: number
   keywords: string[]

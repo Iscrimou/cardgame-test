@@ -110,15 +110,24 @@ export const useGameStore = defineStore('game', () => {
 
   function getBaseStats(instance: CardInstance): EffectiveStats {
     const modifiers = instance.modifiers ?? []
+    const powerCounterModifier =
+      (instance.counters?.['+1/+1'] ?? 0) - (instance.counters?.['-1/-1'] ?? 0)
     return {
-      cost: Math.max(0, instance.card.cost + modifiers.reduce((sum, item) => sum + item.cost, 0)),
+      cost: Math.max(
+        0,
+        (instance.card.cost ?? 0) + modifiers.reduce((sum, item) => sum + item.cost, 0),
+      ),
       power: Math.max(
         0,
-        (instance.card.attack ?? 0) + modifiers.reduce((sum, item) => sum + item.power, 0),
+        (instance.card.attack ?? 0) +
+          modifiers.reduce((sum, item) => sum + item.power, 0) +
+          powerCounterModifier,
       ),
       resistance: Math.max(
         0,
-        (instance.card.defense ?? 0) + modifiers.reduce((sum, item) => sum + item.resistance, 0),
+        (instance.card.defense ?? 0) +
+          modifiers.reduce((sum, item) => sum + item.resistance, 0) +
+          powerCounterModifier,
       ),
     }
   }
@@ -163,7 +172,8 @@ export const useGameStore = defineStore('game', () => {
 
     const stats = currentStats ?? getEffectiveStats(target.instance)
     return (
-      (filter.cost === undefined || matchesNumber(card.cost, filter.cost)) &&
+      (filter.cost === undefined ||
+        (card.cost !== undefined && matchesNumber(card.cost, filter.cost))) &&
       (filter.power === undefined || matchesNumber(stats.power, filter.power)) &&
       (filter.resistance === undefined || matchesNumber(stats.resistance, filter.resistance))
     )
