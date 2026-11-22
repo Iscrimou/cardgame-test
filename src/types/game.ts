@@ -24,6 +24,13 @@ export type CardInstance = {
 
 export type FieldEvent =
   | { type: 'field'; transition: 'enters' | 'leaves'; instance: CardInstance; ownerIndex: number }
+  | {
+      type: 'damage-player'
+      source: CardInstance
+      sourceOwnerIndex: number
+      targetOwnerIndex: number
+      amount: number
+    }
   | { type: 'phase'; phase: PhaseId; ownerIndex: number }
 
 export type EffectResolution = {

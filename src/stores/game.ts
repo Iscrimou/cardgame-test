@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import cards from '@/data/cards'
+import tokens from '@/data/tokens'
 import type {
   CardEffect,
   CardEffectAction,
@@ -47,6 +48,7 @@ export const useGameStore = defineStore('game', () => {
   const damageAssignments = ref<Record<number, Record<number, number>>>({})
   const pendingEffectTarget = ref<PendingTarget | null>(null)
   const effectQueue: EffectResolution[] = []
+  const instancesThatDamagedPlayersThisTurn = new Set<number>()
   let resolvingEffects = false
   let checkingStateBasedActions = false
   let pendingTurnStart = false
@@ -90,6 +92,7 @@ export const useGameStore = defineStore('game', () => {
     damageAssignments.value = {}
     pendingEffectTarget.value = null
     effectQueue.length = 0
+    instancesThatDamagedPlayersThisTurn.clear()
     pendingTurnStart = false
     currentPhase.value = 'main-one'
   }
@@ -160,6 +163,13 @@ export const useGameStore = defineStore('game', () => {
 
     const card = target.instance.card
     if (filter.type && !card.type.startsWith(filter.type)) {
+      return false
+    }
+
+    if (
+      filter.legendary !== undefined &&
+      card.type.toLowerCase().includes('lendári') !== filter.legendary
+    ) {
       return false
     }
 
@@ -287,11 +297,23 @@ export const useGameStore = defineStore('game', () => {
       return false
     }
 
+    if (trigger.type === 'deals-damage-to-opponent') {
+      return (
+        event.type === 'damage-player' &&
+        event.amount > 0 &&
+        event.source.id === source.instance.id &&
+        event.sourceOwnerIndex === source.ownerIndex &&
+        event.targetOwnerIndex !== event.sourceOwnerIndex
+      )
+    }
+
     if (trigger.type === 'phase') {
       return (
         event.type === 'phase' &&
         trigger.phase === event.phase &&
-        (trigger.turn === 'any' || source.ownerIndex === event.ownerIndex)
+        (trigger.turn === 'any' || source.ownerIndex === event.ownerIndex) &&
+        (trigger.condition !== 'source-dealt-damage-to-player-this-turn' ||
+          instancesThatDamagedPlayersThisTurn.has(source.instance.id))
       )
     }
 
@@ -328,6 +350,10 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function queueEffectEvent(event: FieldEvent) {
+    if (event.type === 'damage-player' && event.amount > 0) {
+      instancesThatDamagedPlayersThisTurn.add(event.source.id)
+    }
+
     for (const source of getOwnedCards('field')) {
       for (const effect of source.instance.card.effects ?? []) {
         if (triggerMatches(effect, event, source)) {
@@ -376,10 +402,20 @@ export const useGameStore = defineStore('game', () => {
         )
       }
 
+      const tokenCard =
+        'card' in action
+          ? action.card
+          : tokens.find(({ name }) => name === action.token)
+      if (!tokenCard) {
+        throw new Error(
+          `Ficha não encontrada no catálogo: ${'token' in action ? action.token : ''}.`,
+        )
+      }
+
       for (let index = 0; index < count; index += 1) {
         const token: CardInstance = {
           id: nextCardId++,
-          card: action.card,
+          card: tokenCard,
           summonedOnTurn: turnNumber.value,
           damage: 0,
         }
@@ -430,6 +466,15 @@ export const useGameStore = defineStore('game', () => {
         }
         targetPlayer.life -= action.amount
         message.value = `${resolution.source.card.name} causou ${action.amount} de dano a ${targetPlayer.name}.`
+        if (action.amount > 0) {
+          queueEffectEvent({
+            type: 'damage-player',
+            source: resolution.source,
+            sourceOwnerIndex: resolution.sourceOwnerIndex,
+            targetOwnerIndex: targetPlayerIndex,
+            amount: action.amount,
+          })
+        }
       } else {
         for (const { instance } of targets) {
           instance.damage = (instance.damage ?? 0) + action.amount
@@ -512,7 +557,7 @@ export const useGameStore = defineStore('game', () => {
             ? players.value.map((_, ownerIndex) => ownerIndex)
             : []
         if (action.target.selection === 'up-to') {
-          if (action.type !== 'add-counters') {
+          if (action.type !== 'add-counters' && action.type !== 'destroy') {
             throw new Error(
               `Seleção de até N alvos não suportada para o efeito de ${resolution.source.card.name}.`,
             )
@@ -647,7 +692,7 @@ export const useGameStore = defineStore('game', () => {
       !pending ||
       pending.selection !== 'up-to' ||
       !resolution ||
-      action?.type !== 'add-counters'
+      (action?.type !== 'add-counters' && action?.type !== 'destroy')
     ) {
       return false
     }
@@ -819,6 +864,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     currentPlayerIndex.value = 1 - currentPlayerIndex.value
+    instancesThatDamagedPlayersThisTurn.clear()
     turnNumber.value += 1
     currentPhase.value = 'draw'
 
@@ -968,6 +1014,15 @@ export const useGameStore = defineStore('game', () => {
 
       if (!assignedBlockers.length) {
         defendingPlayer.life -= attackDamage
+        if (attackDamage > 0) {
+          queueEffectEvent({
+            type: 'damage-player',
+            source: attacker,
+            sourceOwnerIndex: currentPlayerIndex.value,
+            targetOwnerIndex: 1 - currentPlayerIndex.value,
+            amount: attackDamage,
+          })
+        }
         continue
       }
 

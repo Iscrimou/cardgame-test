@@ -7,6 +7,7 @@ export type CardTargetFilter = {
   zone?: 'field' | 'hand' | 'any'
   type?: string
   subtype?: string
+  legendary?: boolean
   cost?: NumberFilter
   power?: NumberFilter
   resistance?: NumberFilter
@@ -24,7 +25,13 @@ export type CardEffectTrigger =
   | { type: 'leaves-field' }
   | { type: 'other-enters-field'; filter?: CardTargetFilter }
   | { type: 'other-leaves-field'; filter?: CardTargetFilter }
-  | { type: 'phase'; phase: EffectPhase; turn?: 'controller' | 'any' }
+  | { type: 'deals-damage-to-opponent' }
+  | {
+      type: 'phase'
+      phase: EffectPhase
+      turn?: 'controller' | 'any'
+      condition?: 'source-dealt-damage-to-player-this-turn'
+    }
   | { type: 'continuous' }
 
 export type CardEffectAction =
@@ -37,6 +44,7 @@ export type CardEffectAction =
       duration?: 'permanent' | 'end-of-turn'
     }
   | { type: 'create-token'; card: Card; count?: number }
+  | { type: 'create-token'; token: string; count?: number }
   | { type: 'destroy'; target: EffectTarget }
   | { type: 'damage'; target: EffectTarget; amount: number }
   | {

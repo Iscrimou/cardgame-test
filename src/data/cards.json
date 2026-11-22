@@ -56,7 +56,20 @@
         "effect": "Sempre que Krohzus causar dano ao oponente, crie uma ficha de lobo 2/2 com Ameaçar.",
         "inscription": "Sob minha liderança, a lua anuncia a caçada, e o uivo decreta a guerra.",
         "image": "Gemini_Generated_Image_z97rclz97rclz97r.jpg",
-        "rarity": 3
+        "rarity": 3,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "deals-damage-to-opponent"
+                },
+                "actions": [
+                    {
+                        "type": "create-token",
+                        "token": "LOBO"
+                    }
+                ]
+            }
+        ]
     },
     {
         "name": "ASURA, O DESTRONADOR",
@@ -69,7 +82,29 @@
         "effect": "No começo do fim de seu turno, se Asura causou dano a um jogador neste turno, você pode destruir até uma criatura alvo que não seja lendária.",
         "inscription": "A vingança desumana caminhante.",
         "image": "Gemini_Generated_Image_y9hpf2y9hpf2y9hp.jpg",
-        "rarity": 3
+        "rarity": 3,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "phase",
+                    "phase": "end",
+                    "condition": "source-dealt-damage-to-player-this-turn"
+                },
+                "actions": [
+                    {
+                        "type": "destroy",
+                        "target": {
+                            "selection": "up-to",
+                            "maxTargets": 1,
+                            "filter": {
+                                "type": "Criatura",
+                                "legendary": false
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
     },
     {
         "name": "PRESA DE PRATA",

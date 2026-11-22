@@ -332,6 +332,112 @@ describe('efeitos de cartas', () => {
     expect(game.players[0].field.filter(({ card }) => card.name === token.name)).toHaveLength(2)
   })
 
+  it('Krohzus cria uma ficha de Lobo com Ameaçar ao causar dano ao oponente', () => {
+    const game = createGame()
+    const krohzus = cards.find(({ name }) => name === 'KROHZUS, GENERAL DA MATILHA')
+    const wolfToken = tokens.find(({ name }) => name === 'LOBO')
+    if (!krohzus || !wolfToken) {
+      throw new Error('Carta Krohzus ou ficha Lobo ausente.')
+    }
+
+    const attacker = makeInstance(133, krohzus)
+    attacker.summonedOnTurn = 0
+    game.players[0].field.push(attacker)
+    game.goToPhase('combat')
+
+    expect(game.toggleAttacker(attacker)).toBe(true)
+    expect(game.declareAttack()).toBe(true)
+    expect(game.declareDefenders()).toBe(true)
+    expect(game.players[1].life).toBe(26)
+    expect(game.players[0].field).toHaveLength(2)
+
+    const createdToken = game.players[0].field.find(({ card }) => card.name === wolfToken.name)
+    if (!createdToken) {
+      throw new Error('Krohzus não criou a ficha de Lobo.')
+    }
+
+    expect(createdToken.card).toMatchObject({ name: wolfToken.name, keywords: ['Ameaçar'] })
+    expect(game.getEffectiveStats(createdToken)).toMatchObject({ power: 2, resistance: 2 })
+  })
+
+  it('Asura permite destruir uma criatura não lendária no fim do turno após causar dano a um jogador', () => {
+    const game = createGame()
+    const asura = cards.find(({ name }) => name === 'ASURA, O DESTRONADOR')
+    if (!asura) {
+      throw new Error('Carta de teste Asura, o Destronador ausente.')
+    }
+
+    const attacker = makeInstance(134, asura)
+    attacker.summonedOnTurn = 0
+    const target = makeInstance(135, makeCard({ name: 'Alvo comum' }))
+    const legendaryTarget = makeInstance(
+      136,
+      makeCard({ name: 'Alvo lendário', type: 'Criatura Lendária' }),
+    )
+    game.players[0].field.push(attacker)
+    game.players[1].field.push(target, legendaryTarget)
+    game.goToPhase('combat')
+
+    expect(game.toggleAttacker(attacker)).toBe(true)
+    expect(game.declareAttack()).toBe(true)
+    expect(game.declareDefenders()).toBe(true)
+    expect(game.players[1].life).toBe(25)
+
+    game.goToPhase('end')
+
+    expect(game.pendingEffectTarget?.selection).toBe('up-to')
+    expect(game.pendingEffectTarget?.maxTargets).toBe(1)
+    expect(game.pendingEffectTarget?.candidates.map(({ instance }) => instance.id)).toEqual([
+      target.id,
+    ])
+    expect(game.toggleEffectTarget(target.id)).toBe(true)
+    expect(game.confirmEffectTargets()).toBe(true)
+    expect(game.players[1].graveyard.map(({ id }) => id)).toContain(target.id)
+    expect(game.players[1].field.map(({ id }) => id)).toContain(legendaryTarget.id)
+  })
+
+  it('não dispara o efeito de Asura se ele não causou dano a jogador no turno', () => {
+    const game = createGame()
+    const asura = cards.find(({ name }) => name === 'ASURA, O DESTRONADOR')
+    if (!asura) {
+      throw new Error('Carta de teste Asura, o Destronador ausente.')
+    }
+
+    const source = makeInstance(137, asura)
+    const target = makeInstance(138, makeCard({ name: 'Alvo comum' }))
+    game.players[0].field.push(source)
+    game.players[1].field.push(target)
+
+    game.goToPhase('end')
+
+    expect(game.pendingEffectTarget).toBeNull()
+    expect(game.players[1].field.map(({ id }) => id)).toContain(target.id)
+  })
+
+  it('permite não destruir uma criatura com o efeito de Asura', () => {
+    const game = createGame()
+    const asura = cards.find(({ name }) => name === 'ASURA, O DESTRONADOR')
+    if (!asura) {
+      throw new Error('Carta de teste Asura, o Destronador ausente.')
+    }
+
+    const attacker = makeInstance(139, asura)
+    attacker.summonedOnTurn = 0
+    const target = makeInstance(140, makeCard({ name: 'Alvo comum' }))
+    game.players[0].field.push(attacker)
+    game.players[1].field.push(target)
+    game.goToPhase('combat')
+
+    expect(game.toggleAttacker(attacker)).toBe(true)
+    expect(game.declareAttack()).toBe(true)
+    expect(game.declareDefenders()).toBe(true)
+    game.goToPhase('end')
+
+    expect(game.pendingEffectTarget?.selection).toBe('up-to')
+    expect(game.confirmEffectTargets(true)).toBe(true)
+    expect(game.players[1].field.map(({ id }) => id)).toContain(target.id)
+  })
+
   it('dispara efeitos de saída quando uma ação destrói outra carta', () => {
     const game = createGame()
     const token = makeCard({ name: 'Ficha de vingança', cost: 0 })
