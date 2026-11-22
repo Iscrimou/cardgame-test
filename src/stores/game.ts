@@ -8,37 +8,17 @@ import type {
   EffectTarget,
   NumberFilter,
 } from '@/types/card'
-import type { CardInstance, CardStatModifier, PhaseId, PlayerState } from '@/types/game'
-
-type FieldEvent =
-  | { type: 'field'; transition: 'enters' | 'leaves'; instance: CardInstance; ownerIndex: number }
-  | { type: 'phase'; phase: PhaseId; ownerIndex: number }
-
-type EffectResolution = {
-  effect: CardEffect
-  source: CardInstance
-  sourceOwnerIndex: number
-  event: FieldEvent
-  actionIndex: number
-}
-
-type OwnedCard = {
-  instance: CardInstance
-  ownerIndex: number
-  zone: 'field' | 'hand'
-}
-
-type PendingTarget = {
-  sourceName: string
-  candidates: OwnedCard[]
-  playerCandidates: number[]
-}
-
-type EffectiveStats = {
-  cost: number
-  power: number
-  resistance: number
-}
+import type {
+  CardInstance,
+  CardStatModifier,
+  EffectResolution,
+  EffectiveStats,
+  FieldEvent,
+  OwnedCard,
+  PendingTarget,
+  PhaseId,
+  PlayerState,
+} from '@/types/game'
 
 export const gamePhases = [
   { id: 'draw', label: 'Compra' },
@@ -95,6 +75,23 @@ export const useGameStore = defineStore('game', () => {
       life: 30,
       hasTakenTurn: false,
     }
+  }
+
+  // Reset the game state to its initial values
+  function resetGame(): void {
+    currentPlayerIndex.value = 0
+    currentPhase.value = 'draw'
+    turnNumber.value = 1
+    isDiscarding.value = false
+    message.value = ''
+    combatStep.value = null
+    attackers.value = []
+    blockers.value = {}
+    damageAssignments.value = {}
+    pendingEffectTarget.value = null
+    effectQueue.length = 0
+    pendingTurnStart = false
+    currentPhase.value = 'main-one'
   }
 
   function getOwnedCards(zone: 'field' | 'hand' | 'any' = 'any'): OwnedCard[] {
@@ -398,13 +395,38 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
+    if (action.type === 'add-counters') {
+      if (!Number.isInteger(action.amount) || action.amount < 1) {
+        throw new Error(
+          `Quantidade de contadores inválida no efeito de ${resolution.source.card.name}.`,
+        )
+      }
+
+      const affectedNames: string[] = []
+      for (const { instance } of targets) {
+        const counters = instance.counters ?? {}
+        instance.counters = {
+          ...counters,
+          [action.counter]: (counters[action.counter] ?? 0) + action.amount,
+        }
+        affectedNames.push(instance.card.name)
+      }
+
+      if (affectedNames.length) {
+        message.value = `${resolution.source.card.name} colocou ${action.amount} contador(es) ${action.counter} em: ${affectedNames.join('; ')}.`
+      } else {
+        message.value = `${resolution.source.card.name} não colocou contadores.`
+      }
+
+      checkStateBasedActions()
+      return
+    }
+
     if (action.type === 'damage') {
       if (targetPlayerIndex !== undefined) {
         const targetPlayer = players.value[targetPlayerIndex]
         if (!targetPlayer) {
-          throw new Error(
-            `Dono inválido para alvo do efeito de ${resolution.source.card.name}.`,
-          )
+          throw new Error(`Dono inválido para alvo do efeito de ${resolution.source.card.name}.`)
         }
         targetPlayer.life -= action.amount
         message.value = `${resolution.source.card.name} causou ${action.amount} de dano a ${targetPlayer.name}.`
@@ -489,11 +511,44 @@ export const useGameStore = defineStore('game', () => {
           action.type === 'damage' && action.target.players === 'any'
             ? players.value.map((_, ownerIndex) => ownerIndex)
             : []
+        if (action.target.selection === 'up-to') {
+          if (action.type !== 'add-counters') {
+            throw new Error(
+              `Seleção de até N alvos não suportada para o efeito de ${resolution.source.card.name}.`,
+            )
+          }
+
+          const maxTargets = action.target.maxTargets
+          if (typeof maxTargets !== 'number' || !Number.isInteger(maxTargets) || maxTargets < 1) {
+            throw new Error(`Limite de alvos inválido no efeito de ${resolution.source.card.name}.`)
+          }
+
+          if (targets.length) {
+            pendingEffectTarget.value = {
+              sourceName: resolution.source.card.name,
+              candidates: targets,
+              playerCandidates: [],
+              selection: 'up-to',
+              maxTargets,
+              selectedInstanceIds: [],
+            }
+            message.value = `${resolution.source.card.name}: escolha até ${maxTargets} alvo(s) para o efeito.`
+            break
+          }
+
+          applyEffectAction(action, [], resolution)
+          resolution.actionIndex += 1
+          continue
+        }
+
         if (action.target.selection === 'one' && targets.length + playerCandidates.length > 1) {
           pendingEffectTarget.value = {
             sourceName: resolution.source.card.name,
             candidates: targets,
             playerCandidates,
+            selection: 'one',
+            maxTargets: 1,
+            selectedInstanceIds: [],
           }
           message.value = `${resolution.source.card.name}: escolha um alvo para o efeito.`
           break
@@ -541,11 +596,68 @@ export const useGameStore = defineStore('game', () => {
     const action = resolution?.effect.actions[resolution.actionIndex]
     const target = pending?.candidates.find(({ instance }) => instance.id === instanceId)
 
-    if (!pending || !resolution || !action || action.type === 'create-token' || !target) {
+    if (
+      !pending ||
+      pending.selection !== 'one' ||
+      !resolution ||
+      !action ||
+      action.type === 'create-token' ||
+      !target
+    ) {
       return false
     }
 
     applyEffectAction(action, [target], resolution)
+    resolution.actionIndex += 1
+    pendingEffectTarget.value = null
+    resolveEffectQueue()
+    return true
+  }
+
+  function toggleEffectTarget(instanceId: number) {
+    const pending = pendingEffectTarget.value
+    if (
+      !pending ||
+      pending.selection !== 'up-to' ||
+      !pending.candidates.some(({ instance }) => instance.id === instanceId)
+    ) {
+      return false
+    }
+
+    const isSelected = pending.selectedInstanceIds.includes(instanceId)
+    if (!isSelected && pending.selectedInstanceIds.length >= pending.maxTargets) {
+      return false
+    }
+
+    pendingEffectTarget.value = {
+      ...pending,
+      selectedInstanceIds: isSelected
+        ? pending.selectedInstanceIds.filter((id) => id !== instanceId)
+        : [...pending.selectedInstanceIds, instanceId],
+    }
+    return true
+  }
+
+  function confirmEffectTargets(skipTargets = false) {
+    const pending = pendingEffectTarget.value
+    const resolution = effectQueue[0]
+    const action = resolution?.effect.actions[resolution.actionIndex]
+
+    if (
+      !pending ||
+      pending.selection !== 'up-to' ||
+      !resolution ||
+      action?.type !== 'add-counters'
+    ) {
+      return false
+    }
+
+    const selectedTargets = skipTargets
+      ? []
+      : pending.candidates.filter(({ instance }) =>
+          pending.selectedInstanceIds.includes(instance.id),
+        )
+    applyEffectAction(action, selectedTargets, resolution)
     resolution.actionIndex += 1
     pendingEffectTarget.value = null
     resolveEffectQueue()
@@ -618,19 +730,7 @@ export const useGameStore = defineStore('game', () => {
     ]
     drawCards(players.value[0], 5)
     drawCards(players.value[1], 5)
-    currentPlayerIndex.value = 0
-    currentPhase.value = 'draw'
-    turnNumber.value = 1
-    isDiscarding.value = false
-    message.value = ''
-    combatStep.value = null
-    attackers.value = []
-    blockers.value = {}
-    damageAssignments.value = {}
-    pendingEffectTarget.value = null
-    effectQueue.length = 0
-    pendingTurnStart = false
-    currentPhase.value = 'main-one'
+    resetGame()
   }
 
   function canPlay(card: CardInstance) {
@@ -1075,6 +1175,8 @@ export const useGameStore = defineStore('game', () => {
     canPlayCards,
     getEffectiveStats,
     chooseEffectTarget,
+    toggleEffectTarget,
+    confirmEffectTargets,
     chooseEffectPlayerTarget,
     phases: gamePhases,
     startGame,

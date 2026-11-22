@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
-import CardLibrary from '@/views/CardLibrary.vue'
+import CardLibraryView from '@/views/CardLibraryView.vue'
 import GameView from '@/views/GameView.vue'
 
 const router = createRouter({
@@ -14,7 +14,7 @@ const router = createRouter({
     {
       path: '/library',
       name: 'library',
-      component: CardLibrary,
+      component: CardLibraryView,
     },
     {
       path: '/game',

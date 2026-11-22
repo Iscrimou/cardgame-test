@@ -48,7 +48,7 @@
     {
         "name": "KROHZUS, GENERAL DA MATILHA",
         "type": "Criatura Lendária",
-        "subtype": "Lobo",
+        "subtype": "Lobo Guerreiro",
         "cost": 5,
         "attack": 4,
         "defense": 3,
@@ -61,7 +61,7 @@
     {
         "name": "ASURA, O DESTRONADOR",
         "type": "Criatura Lendária",
-        "subtype": "Lobo",
+        "subtype": "Lobo Demônio",
         "cost": 5,
         "attack": 5,
         "defense": 4,
@@ -124,7 +124,7 @@
     {
         "name": "SOMBRA DA LUA",
         "type": "Criatura",
-        "subtype": "Lobo",
+        "subtype": "Lobo Ladino",
         "cost": 4,
         "attack": 3,
         "defense": 2,
@@ -132,7 +132,28 @@
         "effect": "Quando essa criatura entra no campo de batalha, você pode colocar um contador -1/-1 em até duas criaturas alvo.",
         "inscription": "As vítimas não viram nem ouviram, também, nem poderiam.",
         "image": "Gemini_Generated_Image_ohuqlaohuqlaohuq.jpg",
-        "rarity": 1
+        "rarity": 1,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "enters-field"
+                },
+                "actions": [
+                    {
+                        "type": "add-counters",
+                        "target": {
+                            "selection": "up-to",
+                            "maxTargets": 2,
+                            "filter": {
+                                "type": "Criatura"
+                            }
+                        },
+                        "counter": "-1/-1",
+                        "amount": 1
+                    }
+                ]
+            }
+        ]
     },
     {
         "name": "FARBYN E SNOW, INSEPARÁVEIS",
@@ -156,17 +177,5 @@
         "inscription": "",
         "image": "Gemini_Generated_Image_1mtb1q1mtb1q1mtb.jpg",
         "rarity": 2
-    },
-    {
-        "name": "LOBO",
-        "type": "Criatura Token",
-        "subtype": "Lobo",
-        "attack": 2,
-        "defense": 2,
-        "keywords": [],
-        "effect": "",
-        "inscription": "",
-        "image": "Gemini_Generated_Image_ke8vrpke8vrpke8v.jpg"
     }
-
 ]

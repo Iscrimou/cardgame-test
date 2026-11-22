@@ -157,15 +157,14 @@ function statColor(value: number, base: number) {
       <text x="100" y="120" class="cost-text">{{ props.cost }}</text>
     </g>
 
-    <g v-for="(counter, index) in props.counters" :key="counter.type" :transform="`translate(0 ${index * 132})`"
+    <g v-for="(counter, index) in props.counters" :key="counter.type" :transform="`translate(0 ${index * 170})`"
       :filter="`url(#${ids.shadow})`">
-      <path d="M 650,176 L 700,196 L 710,238 L 675,272 L 635,252 L 625,210 Z" :fill="`url(#${ids.metal})`"
-        stroke="#000000" stroke-width="4" />
-      <path d="M 650,184 L 693,201 L 701,235 L 673,263 L 642,247 L 634,213 Z"
+      <path d="M 650,157 L 711,178 L 731,229 L 705,279 L 650,305 L 605,279 L 579,229 L 600,178 Z"
+        :fill="`url(#${ids.metal})`" stroke="#000000" stroke-width="5" />
+      <path d="M 650,169 L 701,187 L 719,229 L 698,269 L 650,292 L 612,269 L 591,229 L 609,187 Z"
         :fill="counter.type === '-1/-1' ? `url(#${ids.minusCounter})` : `url(#${ids.plusCounter})`" stroke="#111827"
-        stroke-width="2" />
-      <text x="668" y="218" class="counter-type">{{ counter.type }}</text>
-      <text x="668" y="244" class="counter-count">{{ counter.count }}</text>
+        stroke-width="3" />
+      <text x="650" y="254" class="counter-count">{{ counter.count }}</text>
     </g>
 
     <g :filter="`url(#${ids.shadow})`">
@@ -218,7 +217,7 @@ function statColor(value: number, base: number) {
 
 .counter-type {
   font-family: 'Georgia', 'Times New Roman', serif;
-  font-size: 13px;
+  font-size: 22px;
   font-weight: bold;
   fill: #ffffff;
   text-anchor: middle;
@@ -226,7 +225,7 @@ function statColor(value: number, base: number) {
 
 .counter-count {
   font-family: 'Impact', 'Arial Black', sans-serif;
-  font-size: 25px;
+  font-size: 54px;
   font-weight: bold;
   fill: #ffffff;
   text-anchor: middle;

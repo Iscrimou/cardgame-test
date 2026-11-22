@@ -14,7 +14,8 @@ export type CardTargetFilter = {
 
 export type EffectTarget = {
   filter: CardTargetFilter
-  selection: 'source' | 'event' | 'one' | 'all'
+  selection: 'source' | 'event' | 'one' | 'all' | 'up-to'
+  maxTargets?: number
   players?: 'any'
 }
 
@@ -38,12 +39,18 @@ export type CardEffectAction =
   | { type: 'create-token'; card: Card; count?: number }
   | { type: 'destroy'; target: EffectTarget }
   | { type: 'damage'; target: EffectTarget; amount: number }
+  | {
+      type: 'add-counters'
+      target: EffectTarget
+      counter: '+1/+1' | '-1/-1'
+      amount: number
+    }
 
 type ContinuousEffectAction = Omit<
   Extract<CardEffectAction, { type: 'modify' }>,
   'duration' | 'target'
 > & {
-  target: Omit<EffectTarget, 'selection'> & { selection: 'source' | 'all' }
+  target: Omit<EffectTarget, 'selection' | 'maxTargets'> & { selection: 'source' | 'all' }
 }
 
 export type CardEffect =

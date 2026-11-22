@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import cards from '@/data/cards'
+import tokens from '@/data/tokens'
 import type { Card, CardEffect } from '@/types/card'
 import type { CardInstance } from '@/types/game'
 import { useGameStore } from '@/stores/game'
@@ -45,6 +46,19 @@ describe('efeitos de cartas', () => {
     setActivePinia(createPinia())
   })
 
+  it('mantém fichas fora das cartas normais e dos baralhos iniciais', () => {
+    const game = useGameStore()
+    game.startGame()
+
+    expect(tokens.some(({ name }) => name === 'LOBO')).toBe(true)
+    expect(cards.every(({ type }) => !type.startsWith('Criatura Token'))).toBe(true)
+    expect(
+      game.players
+        .flatMap((player) => [...player.deck, ...player.hand])
+        .every(({ card }) => !card.type.startsWith('Criatura Token')),
+    ).toBe(true)
+  })
+
   it('causa dano ao jogador escolhido quando o Lobo Sangrento entra em campo', () => {
     const game = createGame()
     const bloodyWolf = cards.find(({ name }) => name === 'LOBO SANGRENTO CAMINHANTE')
@@ -79,6 +93,83 @@ describe('efeitos de cartas', () => {
     expect(game.chooseEffectTarget(target.id)).toBe(true)
     expect(target.damage).toBe(2)
     expect(game.players[1].field.some(({ id }) => id === target.id)).toBe(true)
+  })
+
+  it('permite à Sombra da Lua escolher até duas criaturas para contadores -1/-1', () => {
+    const game = createGame()
+    const moonShadow = cards.find(({ name }) => name === 'SOMBRA DA LUA')
+    if (!moonShadow) {
+      throw new Error('Carta de teste Sombra da Lua ausente.')
+    }
+
+    const source = makeInstance(125, moonShadow)
+    const firstTarget = makeInstance(126, makeCard({ name: 'Alvo 1', attack: 3, defense: 4 }))
+    const secondTarget = makeInstance(127, makeCard({ name: 'Alvo 2', attack: 2, defense: 3 }))
+    const thirdTarget = makeInstance(128, makeCard({ name: 'Alvo 3', attack: 4, defense: 4 }))
+    game.players[0].hand.push(source)
+    game.players[1].field.push(firstTarget, secondTarget, thirdTarget)
+
+    expect(game.playCard(source)).toBe(true)
+    expect(game.pendingEffectTarget?.selection).toBe('up-to')
+    expect(game.pendingEffectTarget?.maxTargets).toBe(2)
+    expect(game.pendingEffectTarget?.candidates.map(({ instance }) => instance.id)).toEqual([
+      source.id,
+      firstTarget.id,
+      secondTarget.id,
+      thirdTarget.id,
+    ])
+    expect(game.toggleEffectTarget(firstTarget.id)).toBe(true)
+    expect(game.toggleEffectTarget(secondTarget.id)).toBe(true)
+    expect(game.toggleEffectTarget(thirdTarget.id)).toBe(false)
+    expect(firstTarget.counters).toBeUndefined()
+
+    expect(game.confirmEffectTargets()).toBe(true)
+    expect(firstTarget.counters?.['-1/-1']).toBe(1)
+    expect(secondTarget.counters?.['-1/-1']).toBe(1)
+    expect(thirdTarget.counters).toBeUndefined()
+    expect(game.getEffectiveStats(firstTarget)).toMatchObject({ power: 2, resistance: 3 })
+    expect(game.getEffectiveStats(secondTarget)).toMatchObject({ power: 1, resistance: 2 })
+    expect(game.pendingEffectTarget).toBeNull()
+  })
+
+  it('permite recusar a escolha opcional da Sombra da Lua', () => {
+    const game = createGame()
+    const moonShadow = cards.find(({ name }) => name === 'SOMBRA DA LUA')
+    if (!moonShadow) {
+      throw new Error('Carta de teste Sombra da Lua ausente.')
+    }
+
+    const source = makeInstance(129, moonShadow)
+    const target = makeInstance(130, makeCard({ name: 'Alvo', attack: 3, defense: 3 }))
+    game.players[0].hand.push(source)
+    game.players[1].field.push(target)
+
+    expect(game.playCard(source)).toBe(true)
+    expect(game.confirmEffectTargets(true)).toBe(true)
+    expect(target.counters).toBeUndefined()
+    expect(game.pendingEffectTarget).toBeNull()
+  })
+
+  it('destrói criaturas cuja resistência chega a zero após receber o contador', () => {
+    const game = createGame()
+    const moonShadow = cards.find(({ name }) => name === 'SOMBRA DA LUA')
+    if (!moonShadow) {
+      throw new Error('Carta de teste Sombra da Lua ausente.')
+    }
+
+    const source = makeInstance(131, moonShadow)
+    const fragileTarget = makeInstance(
+      132,
+      makeCard({ name: 'Alvo frágil', attack: 1, defense: 1 }),
+    )
+    game.players[0].hand.push(source)
+    game.players[1].field.push(fragileTarget)
+
+    expect(game.playCard(source)).toBe(true)
+    expect(game.toggleEffectTarget(fragileTarget.id)).toBe(true)
+    expect(game.confirmEffectTargets()).toBe(true)
+    expect(game.players[1].field.some(({ id }) => id === fragileTarget.id)).toBe(false)
+    expect(game.players[1].graveyard.some(({ id }) => id === fragileTarget.id)).toBe(true)
   })
 
   it('aplica e expira o bônus condicional da Presa de Prata', () => {
@@ -151,7 +242,7 @@ describe('efeitos de cartas', () => {
 
   it('trata ficha sem custo como custo efetivo zero', () => {
     const game = createGame()
-    const tokenCard = cards.find(({ type }) => type === 'Criatura Token')
+    const tokenCard = tokens.find(({ type }) => type === 'Criatura Token')
     if (!tokenCard) {
       throw new Error('Carta de teste de criatura token ausente.')
     }

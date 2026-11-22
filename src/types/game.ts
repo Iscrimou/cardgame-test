@@ -1,4 +1,4 @@
-import type { Card, EffectPhase } from '@/types/card'
+import type { Card, CardEffect, EffectPhase } from '@/types/card'
 
 export type CardStatModifier = {
   power: number
@@ -20,6 +20,39 @@ export type CardInstance = {
   damage?: number
   modifiers?: CardStatModifier[]
   counters?: CardCounters
+}
+
+export type FieldEvent =
+  | { type: 'field'; transition: 'enters' | 'leaves'; instance: CardInstance; ownerIndex: number }
+  | { type: 'phase'; phase: PhaseId; ownerIndex: number }
+
+export type EffectResolution = {
+  effect: CardEffect
+  source: CardInstance
+  sourceOwnerIndex: number
+  event: FieldEvent
+  actionIndex: number
+}
+
+export type OwnedCard = {
+  instance: CardInstance
+  ownerIndex: number
+  zone: 'field' | 'hand'
+}
+
+export type PendingTarget = {
+  sourceName: string
+  candidates: OwnedCard[]
+  playerCandidates: number[]
+  selection: 'one' | 'up-to'
+  maxTargets: number
+  selectedInstanceIds: number[]
+}
+
+export type EffectiveStats = {
+  cost: number
+  power: number
+  resistance: number
 }
 
 export type PlayerState = {

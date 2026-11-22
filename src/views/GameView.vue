@@ -42,6 +42,8 @@ const {
   getEffectiveStats,
   chooseEffectTarget,
   chooseEffectPlayerTarget,
+  toggleEffectTarget,
+  confirmEffectTargets,
 } = gameStore
 const phases = gameStore.phases
 
@@ -99,6 +101,24 @@ function assignedCombatDamage(attackerId: number) {
   )
 }
 
+function selectEffectCandidate(instanceId: number) {
+  if (pendingEffectTarget.value?.selection === 'up-to') {
+    toggleEffectTarget(instanceId)
+    return
+  }
+
+  chooseEffectTarget(instanceId)
+}
+
+// Check and select a card in hand
+function verifyCardSelection(instance: CardInstance) {
+  if (selectedCardId.value === instance.id) {
+    selectedCardId.value = null
+  } else {
+    selectedCardId.value = instance.id
+  }
+}
+
 function startGame() {
   gameStore.startGame()
   selectedCardId.value = null
@@ -150,6 +170,7 @@ function closeGraveyard() {
   graveyardOwner.value = null
 }
 
+// Handle Esc key to close zoom and graveyard
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     closeZoom()
@@ -181,8 +202,7 @@ startGame()
       </header>
 
       <nav aria-label="Fases do turno" class="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <button v-for="(phase, index) in phases" :key="phase.id" type="button"
-          :disabled="!canNavigateToPhase(phase.id)"
+        <button v-for="(phase, index) in phases" :key="phase.id" type="button" :disabled="!canNavigateToPhase(phase.id)"
           :aria-current="currentPhase === phase.id ? 'step' : undefined"
           class="rounded-lg border px-3 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
           :class="currentPhase === phase.id
@@ -220,12 +240,16 @@ startGame()
         <div class="mt-4 flex min-h-32 flex-wrap justify-center gap-3">
           <div v-for="instance in opponent.field" :key="instance.id" class="w-24 sm:w-32">
             <div class="relative aspect-[5/7] overflow-hidden rounded-lg">
-              <InGameCardRenderer :instance="instance" zone="field" />
-              <ZoomCardButton
-                class="absolute right-1 top-1 z-10 scale-75 origin-top-right"
-                :card-name="instance.card.name"
-                @click="zoomedCard = instance"
-              />
+              <button type="button"
+                class="h-full w-full overflow-hidden rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+                :aria-label="`Selecionar ${instance.card.name}`" :aria-pressed="selectedCardId === instance.id"
+                @click="verifyCardSelection(instance)">
+                <InGameCardRenderer :instance="instance" zone="field" />
+              </button>
+              <div v-if="selectedCardId === instance.id"
+                class="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 scale-75 gap-2">
+                <ZoomCardButton :card-name="instance.card.name" @click="zoomedCard = instance" />
+              </div>
             </div>
             <template v-if="instance.card.type.startsWith('Criatura')">
               <button v-if="combatStep === 'defense' && canBlock(instance)" type="button"
@@ -274,20 +298,23 @@ startGame()
         <div class="mt-4 flex min-h-40 flex-wrap justify-center gap-3 rounded-xl bg-black/20 p-3">
           <div v-for="instance in currentPlayer.field" :key="instance.id" class="w-24 sm:w-32">
             <div class="relative aspect-[5/7] overflow-hidden rounded-lg">
-              <InGameCardRenderer :instance="instance" zone="field" />
-              <ZoomCardButton
-                class="absolute right-1 top-1 z-10 scale-75 origin-top-right"
-                :card-name="instance.card.name"
-                @click="zoomedCard = instance"
-              />
+              <button type="button"
+                class="h-full w-full overflow-hidden rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+                :aria-label="`Selecionar ${instance.card.name}`" :aria-pressed="selectedCardId === instance.id"
+                @click="verifyCardSelection(instance)">
+                <InGameCardRenderer :instance="instance" zone="field" />
+              </button>
+              <div v-if="selectedCardId === instance.id"
+                class="absolute left-1/2 top-2 z-10 flex -translate-x-1/2 scale-75 gap-2">
+                <ZoomCardButton :card-name="instance.card.name" @click="zoomedCard = instance" />
+              </div>
             </div>
             <template v-if="instance.card.type.startsWith('Criatura')">
               <button v-if="combatStep === 'attack' && canAttack(instance)" type="button"
-                class="mt-1 w-full rounded px-2 py-1 text-xs font-semibold"
-                :class="attackers.includes(instance.id)
+                class="mt-1 w-full rounded px-2 py-1 text-xs font-semibold" :class="attackers.includes(instance.id)
                   ? 'bg-amber-400 text-slate-950 hover:bg-amber-300'
-                  : 'bg-slate-700 text-white hover:bg-slate-600'"
-                :aria-pressed="attackers.includes(instance.id)" @click="toggleAttack(instance)">
+                  : 'bg-slate-700 text-white hover:bg-slate-600'
+                  " :aria-pressed="attackers.includes(instance.id)" @click="toggleAttack(instance)">
                 {{ attackers.includes(instance.id) ? 'Remover ataque' : 'Atacar' }}
               </button>
               <p v-else-if="attackers.includes(instance.id)" class="mt-1 text-center text-xs text-amber-300">
@@ -322,7 +349,7 @@ startGame()
                   :value="damageAssignments[group.attacker.id]?.[defender.id] ?? 0"
                   :aria-label="`Dano de ${group.attacker.card.name} em ${defender.card.name}`"
                   class="w-20 rounded bg-slate-950 px-2 py-1 text-right text-white"
-                  @input="updateCombatDamage(group.attacker.id, defender.id, $event)">
+                  @input="updateCombatDamage(group.attacker.id, defender.id, $event)" />
               </label>
             </div>
           </div>
@@ -337,14 +364,13 @@ startGame()
             <button type="button"
               class="h-full w-full overflow-hidden rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
               :aria-label="`Selecionar ${instance.card.name}, custo ${getEffectiveStats(instance).cost}`"
-              :aria-pressed="selectedCardId === instance.id" @click="selectedCardId = instance.id">
+              :aria-pressed="selectedCardId === instance.id" @click="verifyCardSelection(instance)">
               <InGameCardRenderer :instance="instance" zone="hand" />
             </button>
             <div v-if="selectedCardId === instance.id" class="absolute left-1/2 top-2 flex -translate-x-1/2 gap-2">
               <ZoomCardButton :card-name="instance.card.name" @click="zoomedCard = instance" />
               <PlayCardButton v-if="canPlay(instance)" :card-name="instance.card.name"
-                :cost="getEffectiveStats(instance).cost"
-                @click="playCard(instance)" />
+                :cost="getEffectiveStats(instance).cost" @click="playCard(instance)" />
               <DiscardCardButton v-if="isDiscarding && currentPlayer.hand.length > 6" :card-name="instance.card.name"
                 @click="discardCard(instance)" />
             </div>
@@ -363,8 +389,7 @@ startGame()
               Declarar ataque
             </button>
             <button v-else type="button"
-              class="rounded-lg bg-slate-700 px-5 py-3 font-bold text-white hover:bg-slate-600"
-              @click="skipCombat">
+              class="rounded-lg bg-slate-700 px-5 py-3 font-bold text-white hover:bg-slate-600" @click="skipCombat">
               Pular combate
             </button>
           </template>
@@ -379,15 +404,14 @@ startGame()
             Resolver combate
           </button>
           <button v-if="currentPhase !== 'end'" type="button"
-            class="rounded-lg bg-slate-700 px-5 py-3 font-bold text-white hover:bg-slate-600"
-            @click="advancePhase">
+            class="rounded-lg bg-slate-700 px-5 py-3 font-bold text-white hover:bg-slate-600" @click="advancePhase">
             Avançar fase
           </button>
           <button v-if="currentPhase === 'end'" type="button"
             class="rounded-lg bg-amber-400 px-5 py-3 font-bold text-slate-950 hover:bg-amber-300"
-            :disabled="isDiscarding && currentPlayer.hand.length > 6"
-            :class="{ 'cursor-not-allowed opacity-50': isDiscarding && currentPlayer.hand.length > 6 }"
-            @click="endTurn">
+            :disabled="isDiscarding && currentPlayer.hand.length > 6" :class="{
+              'cursor-not-allowed opacity-50': isDiscarding && currentPlayer.hand.length > 6,
+            }" @click="endTurn">
             Encerrar turno
           </button>
         </div>
@@ -398,7 +422,9 @@ startGame()
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm" role="dialog"
       aria-modal="true" aria-labelledby="blocker-choice-title" @click.self="defendingCardId = null">
       <section class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
-        <h2 id="blocker-choice-title" class="text-xl font-bold">Escolha qual atacante esta criatura vai defender</h2>
+        <h2 id="blocker-choice-title" class="text-xl font-bold">
+          Escolha qual atacante esta criatura vai defender
+        </h2>
         <p class="mt-1 text-sm text-slate-400">Uma criatura pode defender apenas um atacante.</p>
         <div class="mt-4 flex flex-col gap-2">
           <button v-for="attacker in availableBlockTargets" :key="attacker.id" type="button"
@@ -412,8 +438,7 @@ startGame()
             Não há atacantes para bloquear.
           </p>
         </div>
-        <button type="button"
-          class="mt-4 rounded-lg border border-slate-600 px-4 py-2 text-sm hover:bg-slate-800"
+        <button type="button" class="mt-4 rounded-lg border border-slate-600 px-4 py-2 text-sm hover:bg-slate-800"
           @click="defendingCardId = null">
           Cancelar
         </button>
@@ -424,20 +449,45 @@ startGame()
       class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm" role="dialog"
       aria-modal="true" aria-labelledby="effect-target-title">
       <section class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
-        <h2 id="effect-target-title" class="text-xl font-bold">Escolha um alvo</h2>
+        <h2 id="effect-target-title" class="text-xl font-bold">
+          {{ pendingEffectTarget.selection === 'up-to' ? 'Escolha os alvos' : 'Escolha um alvo' }}
+        </h2>
         <p class="mt-1 text-sm text-slate-400">Efeito de {{ pendingEffectTarget.sourceName }}</p>
+        <p v-if="pendingEffectTarget.selection === 'up-to'" class="mt-1 text-sm text-slate-400">
+          Selecione até {{ pendingEffectTarget.maxTargets }} criatura(s) ({{
+            pendingEffectTarget.selectedInstanceIds.length
+          }}
+          selecionada(s)).
+        </p>
         <div class="mt-4 flex flex-col gap-2">
           <button v-for="candidate in pendingEffectTarget.candidates" :key="candidate.instance.id" type="button"
-            class="rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
-            @click="chooseEffectTarget(candidate.instance.id)">
+            class="rounded-lg px-4 py-3 text-left hover:bg-slate-700" :class="pendingEffectTarget.selectedInstanceIds.includes(candidate.instance.id)
+              ? 'bg-amber-400 text-slate-950'
+              : 'bg-slate-800 text-white'
+              " :aria-pressed="pendingEffectTarget.selection === 'up-to'
+                ? pendingEffectTarget.selectedInstanceIds.includes(candidate.instance.id)
+                : undefined
+                " @click="selectEffectCandidate(candidate.instance.id)">
             {{ candidate.instance.card.name }} ·
             {{ candidate.ownerIndex === currentPlayerIndex ? currentPlayer.name : opponent.name }} ·
             {{ candidate.zone === 'field' ? 'Campo' : 'Mão' }}
           </button>
-          <button v-for="ownerIndex in pendingEffectTarget.playerCandidates" :key="`player-${ownerIndex}`"
-            type="button" class="rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
+          <button v-for="ownerIndex in pendingEffectTarget.playerCandidates" :key="`player-${ownerIndex}`" type="button"
+            class="rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
             @click="chooseEffectPlayerTarget(ownerIndex)">
             {{ ownerIndex === currentPlayerIndex ? currentPlayer.name : opponent.name }} · Jogador
+          </button>
+        </div>
+        <div v-if="pendingEffectTarget.selection === 'up-to'" class="mt-4 flex gap-2">
+          <button type="button"
+            class="flex-1 rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-300"
+            @click="confirmEffectTargets()">
+            Confirmar alvos
+          </button>
+          <button type="button"
+            class="flex-1 rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-600"
+            @click="confirmEffectTargets(true)">
+            Não escolher alvos
           </button>
         </div>
       </section>
