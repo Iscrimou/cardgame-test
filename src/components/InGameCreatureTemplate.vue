@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
+import { ZONES, type CardLocation } from '@/consts/zones'
 import type { Card } from '@/types/card'
 import type { CardCounterDisplay } from '@/types/game'
 
 const props = defineProps<{
   card: Card
-  zone: 'hand' | 'field'
+  zone: CardLocation
   cost?: number
   power: number
   resistance: number
@@ -33,7 +34,7 @@ const imageHref = computed(() => {
 
 const showCost = computed(
   () =>
-    props.zone === 'hand' &&
+    props.zone === ZONES.hand &&
     props.cost !== undefined &&
     !props.card.type.startsWith('Criatura Token'),
 )

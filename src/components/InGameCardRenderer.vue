@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { CardLocation } from '@/consts/zones'
 import InGameCreatureTemplate from '@/components/InGameCreatureTemplate.vue'
 import InGameCreatureTokenTemplate from '@/components/InGameCreatureTokenTemplate.vue'
 import InGameMagicTemplate from '@/components/InGameMagicTemplate.vue'
@@ -8,7 +9,7 @@ import type { CardCounterType, CardInstance } from '@/types/game'
 
 const props = defineProps<{
   instance: CardInstance
-  zone: 'hand' | 'field'
+  zone: CardLocation
 }>()
 
 const gameStore = useGameStore()

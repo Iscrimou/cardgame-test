@@ -39,4 +39,4 @@ __screenshots__/
 *.timestamp-*-*.mjs
 
 # Assets
-src/assets/cards-images/*
+# src/assets/cards-images/*

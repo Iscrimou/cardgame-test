@@ -1,5 +1,11 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { EFFECT_ACTIONS } from '@/consts/effect-actions'
+import { EFFECT_TRIGGERS } from '@/consts/effect-triggers'
+import { EFFECT_TARGET_CONTROLLERS, EFFECT_TARGET_SELECTIONS } from '@/consts/effect-targets'
+import { EFFECT_DURATIONS } from '@/consts/effect-durations'
+import { PHASES, phaseOrder } from '@/consts/phases'
+import { ZONES, type ZoneId } from '@/consts/zones'
 import cards from '@/data/cards'
 import tokens from '@/data/tokens'
 import type {
@@ -21,13 +27,7 @@ import type {
   PlayerState,
 } from '@/types/game'
 
-export const gamePhases = [
-  { id: 'draw', label: 'Compra' },
-  { id: 'main-one', label: 'Principal 1' },
-  { id: 'combat', label: 'Combate' },
-  { id: 'main-two', label: 'Principal 2' },
-  { id: 'end', label: 'Fim do turno' },
-] as const satisfies { id: PhaseId; label: string }[]
+export const gamePhases = phaseOrder
 
 const maxEffectActionsPerResolution = 1000
 const maxTokensPerEffect = 100
@@ -38,7 +38,7 @@ export const useGameStore = defineStore('game', () => {
     createPlayer('Jogador 2'),
   ])
   const currentPlayerIndex = ref(0)
-  const currentPhase = ref<PhaseId>('draw')
+  const currentPhase = ref<PhaseId>(PHASES.draw)
   const turnNumber = ref(1)
   const isDiscarding = ref(false)
   const message = ref('')
@@ -62,7 +62,7 @@ export const useGameStore = defineStore('game', () => {
   )
   const phaseIndex = computed(() => gamePhases.findIndex(({ id }) => id === currentPhase.value))
   const canPlayCards = computed(
-    () => currentPhase.value === 'main-one' || currentPhase.value === 'main-two',
+    () => currentPhase.value === PHASES.mainOne || currentPhase.value === PHASES.mainTwo,
   )
 
   function createPlayer(name: string): PlayerState {
@@ -82,7 +82,7 @@ export const useGameStore = defineStore('game', () => {
   // Reset the game state to its initial values
   function resetGame(): void {
     currentPlayerIndex.value = 0
-    currentPhase.value = 'draw'
+    currentPhase.value = PHASES.draw
     turnNumber.value = 1
     isDiscarding.value = false
     message.value = ''
@@ -94,17 +94,17 @@ export const useGameStore = defineStore('game', () => {
     effectQueue.length = 0
     instancesThatDamagedPlayersThisTurn.clear()
     pendingTurnStart = false
-    currentPhase.value = 'main-one'
+    currentPhase.value = PHASES.mainOne
   }
 
-  function getOwnedCards(zone: 'field' | 'hand' | 'any' = 'any'): OwnedCard[] {
+  function getOwnedCards(zone: ZoneId = ZONES.any): OwnedCard[] {
     return players.value.flatMap((player, ownerIndex) => [
-      ...(zone === 'hand'
+      ...(zone === ZONES.hand
         ? []
-        : player.field.map((instance) => ({ instance, ownerIndex, zone: 'field' as const }))),
-      ...(zone === 'field'
+        : player.field.map((instance) => ({ instance, ownerIndex, zone: ZONES.field }))),
+      ...(zone === ZONES.field
         ? []
-        : player.hand.map((instance) => ({ instance, ownerIndex, zone: 'hand' as const }))),
+        : player.hand.map((instance) => ({ instance, ownerIndex, zone: ZONES.hand }))),
     ])
   }
 
@@ -149,14 +149,16 @@ export const useGameStore = defineStore('game', () => {
     filter: CardTargetFilter,
     currentStats?: EffectiveStats,
   ) {
-    const zone = filter.zone ?? 'field'
-    if (zone !== 'any' && target.zone !== zone) {
+    const zone = filter.zone ?? ZONES.field
+    if (zone !== ZONES.any && target.zone !== zone) {
       return false
     }
 
     if (
-      (filter.controller === 'you' && target.ownerIndex !== sourceOwnerIndex) ||
-      (filter.controller === 'opponent' && target.ownerIndex === sourceOwnerIndex)
+      (filter.controller === EFFECT_TARGET_CONTROLLERS.you &&
+        target.ownerIndex !== sourceOwnerIndex) ||
+      (filter.controller === EFFECT_TARGET_CONTROLLERS.opponent &&
+        target.ownerIndex === sourceOwnerIndex)
     ) {
       return false
     }
@@ -196,21 +198,21 @@ export const useGameStore = defineStore('game', () => {
 
     for (const source of getOwnedCards('field')) {
       for (const effect of source.instance.card.effects ?? []) {
-        if (effect.trigger.type !== 'continuous') {
+        if (effect.trigger.type !== EFFECT_TRIGGERS.continuous) {
           continue
         }
 
         for (const action of effect.actions) {
-          if (action.type !== 'modify') {
+          if (action.type !== EFFECT_ACTIONS.modify) {
             continue
           }
 
           const appliesToSource =
-            action.target.selection === 'source' &&
+            action.target.selection === EFFECT_TARGET_SELECTIONS.source &&
             source.instance.id === instance.id &&
             matchesTargetFilter(target, source.ownerIndex, action.target.filter, stats)
           const appliesToAll =
-            action.target.selection === 'all' &&
+            action.target.selection === EFFECT_TARGET_SELECTIONS.all &&
             matchesTargetFilter(target, source.ownerIndex, action.target.filter, stats)
 
           if (appliesToSource || appliesToAll) {
@@ -236,22 +238,22 @@ export const useGameStore = defineStore('game', () => {
     if (
       fieldOnly &&
       target.filter.zone &&
-      target.filter.zone !== 'field' &&
-      target.filter.zone !== 'any'
+      target.filter.zone !== ZONES.field &&
+      target.filter.zone !== ZONES.any
     ) {
       return []
     }
 
-    const zone = fieldOnly ? 'field' : (target.filter.zone ?? 'field')
+    const zone = fieldOnly ? ZONES.field : (target.filter.zone ?? ZONES.field)
     const candidates = getOwnedCards(zone).filter((candidate) =>
       matchesTargetFilter(candidate, resolution.sourceOwnerIndex, target.filter),
     )
 
-    if (target.selection === 'source') {
+    if (target.selection === EFFECT_TARGET_SELECTIONS.source) {
       return candidates.filter(({ instance }) => instance.id === resolution.source.id)
     }
 
-    if (target.selection === 'event') {
+    if (target.selection === EFFECT_TARGET_SELECTIONS.event) {
       const event = resolution.event
       return event.type === 'field'
         ? candidates.filter(({ instance }) => instance.id === event.instance.id)
@@ -293,11 +295,11 @@ export const useGameStore = defineStore('game', () => {
 
   function triggerMatches(effect: CardEffect, event: FieldEvent, source: OwnedCard) {
     const trigger = effect.trigger
-    if (trigger.type === 'continuous') {
+    if (trigger.type === EFFECT_TRIGGERS.continuous) {
       return false
     }
 
-    if (trigger.type === 'attacks') {
+    if (trigger.type === EFFECT_TRIGGERS.attacks) {
       if (event.type !== 'attacks' || event.ownerIndex !== source.ownerIndex) {
         return false
       }
@@ -312,7 +314,7 @@ export const useGameStore = defineStore('game', () => {
           event.attackerIds.includes(instance.id) &&
           (!trigger.filter ||
             matchesTargetFilter(
-              { instance, ownerIndex, zone: 'field' },
+              { instance, ownerIndex, zone: ZONES.field },
               source.ownerIndex,
               trigger.filter,
             )),
@@ -320,7 +322,7 @@ export const useGameStore = defineStore('game', () => {
       return otherAttacker !== undefined
     }
 
-    if (trigger.type === 'deals-damage-to-opponent') {
+    if (trigger.type === EFFECT_TRIGGERS.dealsDamageToOpponent) {
       return (
         event.type === 'damage-player' &&
         event.amount > 0 &&
@@ -330,7 +332,7 @@ export const useGameStore = defineStore('game', () => {
       )
     }
 
-    if (trigger.type === 'phase') {
+    if (trigger.type === EFFECT_TRIGGERS.phase) {
       return (
         event.type === 'phase' &&
         trigger.phase === event.phase &&
@@ -345,15 +347,15 @@ export const useGameStore = defineStore('game', () => {
     }
 
     const isSourceEvent = source.instance.id === event.instance.id
-    if (trigger.type === 'enters-field') {
+    if (trigger.type === EFFECT_TRIGGERS.entersField) {
       return event.transition === 'enters' && isSourceEvent
     }
 
-    if (trigger.type === 'leaves-field') {
+    if (trigger.type === EFFECT_TRIGGERS.leavesField) {
       return event.transition === 'leaves' && isSourceEvent
     }
 
-    const entering = trigger.type === 'other-enters-field'
+    const entering = trigger.type === EFFECT_TRIGGERS.otherEntersField
     if (
       (entering && event.transition !== 'enters') ||
       (!entering && event.transition !== 'leaves') ||
@@ -365,7 +367,7 @@ export const useGameStore = defineStore('game', () => {
     return (
       !trigger.filter ||
       matchesTargetFilter(
-        { instance: event.instance, ownerIndex: event.ownerIndex, zone: 'field' },
+        { instance: event.instance, ownerIndex: event.ownerIndex, zone: ZONES.field },
         source.ownerIndex,
         trigger.filter,
       )
@@ -410,7 +412,7 @@ export const useGameStore = defineStore('game', () => {
     resolution: EffectResolution,
     targetPlayerIndex?: number,
   ) {
-    if (action.type === 'create-token') {
+    if (action.type === EFFECT_ACTIONS.createToken) {
       const count = action.count ?? 1
       if (!Number.isInteger(count) || count < 1 || count > maxTokensPerEffect) {
         throw new Error(
@@ -454,7 +456,7 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
-    if (action.type === 'add-counters') {
+    if (action.type === EFFECT_ACTIONS.addCounters) {
       if (!Number.isInteger(action.amount) || action.amount < 1) {
         throw new Error(
           `Quantidade de contadores inválida no efeito de ${resolution.source.card.name}.`,
@@ -481,7 +483,7 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
-    if (action.type === 'damage') {
+    if (action.type === EFFECT_ACTIONS.damage) {
       if (targetPlayerIndex !== undefined) {
         const targetPlayer = players.value[targetPlayerIndex]
         if (!targetPlayer) {
@@ -513,28 +515,28 @@ export const useGameStore = defineStore('game', () => {
 
     const affectedNames: string[] = []
     for (const target of targets) {
-      if (action.type === 'modify') {
+      if (action.type === EFFECT_ACTIONS.modify) {
         const modifier: CardStatModifier = {
           power: action.power ?? 0,
           resistance: action.resistance ?? 0,
           cost: action.cost ?? 0,
-          duration: action.duration ?? 'permanent',
+          duration: action.duration ?? EFFECT_DURATIONS.permanent,
         }
-        if (modifier.duration === 'end-of-turn') {
+        if (modifier.duration === EFFECT_DURATIONS.endOfTurn) {
           modifier.expiresAtTurn = turnNumber.value
           modifier.expiresForPlayer = currentPlayerIndex.value
         }
         target.instance.modifiers = [...(target.instance.modifiers ?? []), modifier]
         affectedNames.push(target.instance.card.name)
-      } else if (target.zone === 'field') {
+      } else if (target.zone === ZONES.field) {
         removeFromField(target.ownerIndex, target.instance)
         affectedNames.push(target.instance.card.name)
       }
     }
 
-    if (affectedNames.length && action.type === 'modify') {
+    if (affectedNames.length && action.type === EFFECT_ACTIONS.modify) {
       message.value = `${resolution.source.card.name} modificou: ${affectedNames.join(', ')}.`
-    } else if (affectedNames.length && action.type === 'destroy') {
+    } else if (affectedNames.length && action.type === EFFECT_ACTIONS.destroy) {
       message.value = `${resolution.source.card.name} destruiu: ${affectedNames.join(', ')}.`
     }
 
@@ -568,19 +570,26 @@ export const useGameStore = defineStore('game', () => {
           )
         }
 
-        if (action.type === 'create-token') {
+        if (action.type === EFFECT_ACTIONS.createToken) {
           applyEffectAction(action, [], resolution)
           resolution.actionIndex += 1
           continue
         }
 
-        const targets = getActionTargets(action.target, resolution, action.type === 'destroy')
+        const targets = getActionTargets(
+          action.target,
+          resolution,
+          action.type === EFFECT_ACTIONS.destroy,
+        )
         const playerCandidates =
-          action.type === 'damage' && action.target.players === 'any'
+          action.type === EFFECT_ACTIONS.damage && action.target.players === EFFECT_TARGET_CONTROLLERS.any
             ? players.value.map((_, ownerIndex) => ownerIndex)
             : []
-        if (action.target.selection === 'up-to') {
-          if (action.type !== 'add-counters' && action.type !== 'destroy') {
+        if (action.target.selection === EFFECT_TARGET_SELECTIONS.upTo) {
+          if (
+            action.type !== EFFECT_ACTIONS.addCounters &&
+            action.type !== EFFECT_ACTIONS.destroy
+          ) {
             throw new Error(
               `Seleção de até N alvos não suportada para o efeito de ${resolution.source.card.name}.`,
             )
@@ -596,7 +605,7 @@ export const useGameStore = defineStore('game', () => {
               sourceName: resolution.source.card.name,
               candidates: targets,
               playerCandidates: [],
-              selection: 'up-to',
+              selection: EFFECT_TARGET_SELECTIONS.upTo,
               maxTargets,
               selectedInstanceIds: [],
             }
@@ -609,12 +618,15 @@ export const useGameStore = defineStore('game', () => {
           continue
         }
 
-        if (action.target.selection === 'one' && targets.length + playerCandidates.length > 1) {
+        if (
+          action.target.selection === EFFECT_TARGET_SELECTIONS.one &&
+          targets.length + playerCandidates.length > 1
+        ) {
           pendingEffectTarget.value = {
             sourceName: resolution.source.card.name,
             candidates: targets,
             playerCandidates,
-            selection: 'one',
+            selection: EFFECT_TARGET_SELECTIONS.one,
             maxTargets: 1,
             selectedInstanceIds: [],
           }
@@ -622,12 +634,18 @@ export const useGameStore = defineStore('game', () => {
           break
         }
 
-        if (action.type === 'damage' && playerCandidates.length === 1 && targets.length === 0) {
+        if (
+          action.type === EFFECT_ACTIONS.damage &&
+          playerCandidates.length === 1 &&
+          targets.length === 0
+        ) {
           applyEffectAction(action, [], resolution, playerCandidates[0])
         } else {
           applyEffectAction(
             action,
-            action.target.selection === 'one' ? targets.slice(0, 1) : targets,
+            action.target.selection === EFFECT_TARGET_SELECTIONS.one
+              ? targets.slice(0, 1)
+              : targets,
             resolution,
           )
         }
@@ -653,8 +671,8 @@ export const useGameStore = defineStore('game', () => {
     }
     message.value = `${nextPlayer.name} começou o turno com ${nextPlayer.maxMana} de mana.`
     drawCards(nextPlayer, 1)
-    currentPhase.value = 'main-one'
-    queueEffectEvent({ type: 'phase', phase: 'main-one', ownerIndex: currentPlayerIndex.value })
+    currentPhase.value = PHASES.mainOne
+    queueEffectEvent({ type: 'phase', phase: PHASES.mainOne, ownerIndex: currentPlayerIndex.value })
     resolveEffectQueue()
   }
 
@@ -666,10 +684,10 @@ export const useGameStore = defineStore('game', () => {
 
     if (
       !pending ||
-      pending.selection !== 'one' ||
+      pending.selection !== EFFECT_TARGET_SELECTIONS.one ||
       !resolution ||
       !action ||
-      action.type === 'create-token' ||
+      action.type === EFFECT_ACTIONS.createToken ||
       !target
     ) {
       return false
@@ -686,7 +704,7 @@ export const useGameStore = defineStore('game', () => {
     const pending = pendingEffectTarget.value
     if (
       !pending ||
-      pending.selection !== 'up-to' ||
+      pending.selection !== EFFECT_TARGET_SELECTIONS.upTo ||
       !pending.candidates.some(({ instance }) => instance.id === instanceId)
     ) {
       return false
@@ -713,9 +731,9 @@ export const useGameStore = defineStore('game', () => {
 
     if (
       !pending ||
-      pending.selection !== 'up-to' ||
+      pending.selection !== EFFECT_TARGET_SELECTIONS.upTo ||
       !resolution ||
-      (action?.type !== 'add-counters' && action?.type !== 'destroy')
+      (action?.type !== EFFECT_ACTIONS.addCounters && action?.type !== EFFECT_ACTIONS.destroy)
     ) {
       return false
     }
@@ -740,7 +758,7 @@ export const useGameStore = defineStore('game', () => {
     if (
       !pending ||
       !resolution ||
-      action?.type !== 'damage' ||
+      action?.type !== EFFECT_ACTIONS.damage ||
       !pending.playerCandidates.includes(ownerIndex)
     ) {
       return false
@@ -876,7 +894,7 @@ export const useGameStore = defineStore('game', () => {
     for (const { instance } of getOwnedCards()) {
       instance.modifiers = (instance.modifiers ?? []).filter(
         (modifier) =>
-          modifier.duration !== 'end-of-turn' ||
+          modifier.duration !== EFFECT_DURATIONS.endOfTurn ||
           modifier.expiresAtTurn !== turnNumber.value ||
           modifier.expiresForPlayer !== currentPlayerIndex.value,
       )
@@ -892,10 +910,10 @@ export const useGameStore = defineStore('game', () => {
     currentPlayerIndex.value = 1 - currentPlayerIndex.value
     instancesThatDamagedPlayersThisTurn.clear()
     turnNumber.value += 1
-    currentPhase.value = 'draw'
+    currentPhase.value = PHASES.draw
 
     pendingTurnStart = true
-    queueEffectEvent({ type: 'phase', phase: 'draw', ownerIndex: currentPlayerIndex.value })
+    queueEffectEvent({ type: 'phase', phase: PHASES.draw, ownerIndex: currentPlayerIndex.value })
     resolveEffectQueue()
   }
 
@@ -903,13 +921,26 @@ export const useGameStore = defineStore('game', () => {
     return instance.card.type.startsWith('Criatura')
   }
 
+  function hasKeyword(instance: CardInstance, keyword: string) {
+    return instance.card.keywords.some((entry) =>
+      entry
+        .split(',')
+        .map((item) => item.trim())
+        .includes(keyword),
+    )
+  }
+
   function canAttackThisTurn(instance: CardInstance) {
-    return isCreature(instance) && instance.summonedOnTurn !== turnNumber.value
+    return (
+      isCreature(instance) &&
+      (instance.summonedOnTurn !== turnNumber.value ||
+        hasKeyword(instance, 'Ímpeto'))
+    )
   }
 
   function canAttack(instance: CardInstance) {
     return (
-      currentPhase.value === 'combat' &&
+      currentPhase.value === PHASES.combat &&
       combatStep.value === 'attack' &&
       currentPlayer.value.field.some(({ id }) => id === instance.id) &&
       canAttackThisTurn(instance)
@@ -918,7 +949,7 @@ export const useGameStore = defineStore('game', () => {
 
   function canBlock(instance: CardInstance) {
     return (
-      currentPhase.value === 'combat' &&
+      currentPhase.value === PHASES.combat &&
       combatStep.value === 'defense' &&
       opponent.value.field.some(({ id }) => id === instance.id) &&
       isCreature(instance) &&
@@ -939,7 +970,7 @@ export const useGameStore = defineStore('game', () => {
 
   function declareAttack() {
     if (
-      currentPhase.value !== 'combat' ||
+      currentPhase.value !== PHASES.combat ||
       combatStep.value !== 'attack' ||
       !attackers.value.length
     ) {
@@ -980,7 +1011,7 @@ export const useGameStore = defineStore('game', () => {
       .reduce((total, [, amount]) => total + amount, 0)
 
     if (
-      currentPhase.value !== 'combat' ||
+      currentPhase.value !== PHASES.combat ||
       combatStep.value !== 'damage' ||
       !attacker ||
       !defender ||
@@ -1001,10 +1032,10 @@ export const useGameStore = defineStore('game', () => {
 
   const canResolveCombat = computed(() => {
     if (combatStep.value === 'defense') {
-      return currentPhase.value === 'combat'
+      return currentPhase.value === PHASES.combat
     }
 
-    if (currentPhase.value !== 'combat' || combatStep.value !== 'damage') {
+    if (currentPhase.value !== PHASES.combat || combatStep.value !== 'damage') {
       return false
     }
 
@@ -1069,6 +1100,24 @@ export const useGameStore = defineStore('game', () => {
           (damageByCard.get(attacker.id) ?? 0) + getEffectiveStats(defender).power,
         )
       }
+
+      if (hasKeyword(attacker, 'Atropelar')) {
+        const combinedBlockerResistance = assignedBlockers.reduce(
+          (total, defender) => total + getEffectiveStats(defender).resistance,
+          0,
+        )
+        const trampleDamage = Math.max(0, attackDamage - combinedBlockerResistance)
+        if (trampleDamage > 0) {
+          defendingPlayer.life -= trampleDamage
+          queueEffectEvent({
+            type: 'damage-player',
+            source: attacker,
+            sourceOwnerIndex: currentPlayerIndex.value,
+            targetOwnerIndex: 1 - currentPlayerIndex.value,
+            amount: trampleDamage,
+          })
+        }
+      }
     }
 
     const defeated: string[] = []
@@ -1091,7 +1140,7 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    currentPhase.value = 'main-two'
+    currentPhase.value = PHASES.mainTwo
     combatStep.value = null
     attackers.value = []
     blockers.value = {}
@@ -1100,13 +1149,13 @@ export const useGameStore = defineStore('game', () => {
     message.value = defeated.length
       ? `Combate resolvido. Foram para o cemitério: ${defeated.join(', ')}.`
       : 'Combate resolvido.'
-    queueEffectEvent({ type: 'phase', phase: 'main-two', ownerIndex: currentPlayerIndex.value })
+    queueEffectEvent({ type: 'phase', phase: PHASES.mainTwo, ownerIndex: currentPlayerIndex.value })
     resolveEffectQueue()
     checkStateBasedActions()
   }
 
   function declareDefenders() {
-    if (currentPhase.value !== 'combat' || combatStep.value !== 'defense') {
+    if (currentPhase.value !== PHASES.combat || combatStep.value !== 'defense') {
       return false
     }
 
@@ -1140,7 +1189,7 @@ export const useGameStore = defineStore('game', () => {
 
   function resolveCombat() {
     if (
-      currentPhase.value !== 'combat' ||
+      currentPhase.value !== PHASES.combat ||
       combatStep.value !== 'damage' ||
       !canResolveCombat.value
     ) {
@@ -1154,19 +1203,19 @@ export const useGameStore = defineStore('game', () => {
   function skipCombat() {
     if (
       pendingEffectTarget.value ||
-      currentPhase.value !== 'combat' ||
+      currentPhase.value !== PHASES.combat ||
       combatStep.value !== 'attack' ||
       attackers.value.length
     ) {
       return false
     }
 
-    currentPhase.value = 'main-two'
+    currentPhase.value = PHASES.mainTwo
     combatStep.value = null
     blockers.value = {}
     damageAssignments.value = {}
     message.value = 'Combate encerrado sem ataques.'
-    queueEffectEvent({ type: 'phase', phase: 'main-two', ownerIndex: currentPlayerIndex.value })
+    queueEffectEvent({ type: 'phase', phase: PHASES.mainTwo, ownerIndex: currentPlayerIndex.value })
     resolveEffectQueue()
     return true
   }
@@ -1176,7 +1225,7 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
-    if (currentPhase.value === 'end') {
+    if (currentPhase.value === PHASES.end) {
       endTurn()
       return
     }
@@ -1184,8 +1233,8 @@ export const useGameStore = defineStore('game', () => {
     const nextPhase = gamePhases[phaseIndex.value + 1]
 
     if (nextPhase) {
-      if (nextPhase.id === 'combat' && !currentPlayer.value.field.some(canAttackThisTurn)) {
-        goToPhase('main-two')
+      if (nextPhase.id === PHASES.combat && !currentPlayer.value.field.some(canAttackThisTurn)) {
+        goToPhase(PHASES.mainTwo)
         message.value = 'Combate pulado: não há criaturas aptas a atacar.'
         return
       }
@@ -1200,8 +1249,8 @@ export const useGameStore = defineStore('game', () => {
     }
 
     const targetIndex = gamePhases.findIndex(({ id }) => id === phase)
-    if (currentPhase.value === 'draw') {
-      return phase === 'main-one'
+    if (currentPhase.value === PHASES.draw) {
+      return phase === PHASES.mainOne
     }
 
     return targetIndex > phaseIndex.value
@@ -1212,11 +1261,11 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
-    const skippedCombat = currentPhase.value === 'combat'
+    const skippedCombat = currentPhase.value === PHASES.combat
     currentPhase.value = phase
     isDiscarding.value = false
 
-    if (phase === 'combat') {
+    if (phase === PHASES.combat) {
       combatStep.value = 'attack'
       attackers.value = []
       blockers.value = {}

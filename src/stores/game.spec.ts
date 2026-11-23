@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { EFFECT_ACTIONS } from '@/consts/effect-actions'
+import { EFFECT_TRIGGERS } from '@/consts/effect-triggers'
+import { EFFECT_TARGET_CONTROLLERS, EFFECT_TARGET_SELECTIONS } from '@/consts/effect-targets'
+import { EFFECT_DURATIONS } from '@/consts/effect-durations'
+import { PHASES } from '@/consts/phases'
+import { ZONES } from '@/consts/zones'
 import cards from '@/data/cards'
 import tokens from '@/data/tokens'
 import type { Card, CardEffect } from '@/types/card'
@@ -37,7 +43,7 @@ function createGame() {
   game.players[1].hand = []
   game.players[0].mana = 20
   game.currentPlayerIndex = 0
-  game.currentPhase = 'main-one'
+  game.currentPhase = PHASES.mainOne
   return game
 }
 
@@ -110,7 +116,7 @@ describe('efeitos de cartas', () => {
     game.players[1].field.push(firstTarget, secondTarget, thirdTarget)
 
     expect(game.playCard(source)).toBe(true)
-    expect(game.pendingEffectTarget?.selection).toBe('up-to')
+    expect(game.pendingEffectTarget?.selection).toBe(EFFECT_TARGET_SELECTIONS.upTo)
     expect(game.pendingEffectTarget?.maxTargets).toBe(2)
     expect(game.pendingEffectTarget?.candidates.map(({ instance }) => instance.id)).toEqual([
       source.id,
@@ -198,14 +204,14 @@ describe('efeitos de cartas', () => {
   it('recalcula efeitos contínuos e respeita o controlador do alvo', () => {
     const game = createGame()
     const continuousEffect: CardEffect = {
-      trigger: { type: 'continuous' },
+      trigger: { type: EFFECT_TRIGGERS.continuous },
       actions: [
         {
-          type: 'modify',
+          type: EFFECT_ACTIONS.modify,
           target: {
-            selection: 'all',
+            selection: EFFECT_TARGET_SELECTIONS.all,
             filter: {
-              controller: 'you',
+              controller: EFFECT_TARGET_CONTROLLERS.you,
               type: 'Criatura',
               subtype: 'Lobo',
               cost: 1,
@@ -244,7 +250,7 @@ describe('efeitos de cartas', () => {
     otherWolf.summonedOnTurn = 0
     game.players[0].field.push(source, otherWolf)
 
-    game.goToPhase('combat')
+    game.goToPhase(PHASES.combat)
     expect(game.toggleAttacker(source)).toBe(true)
     expect(game.getEffectiveStats(source)).toMatchObject({ power: 4, resistance: 3 })
     expect(game.toggleAttacker(otherWolf)).toBe(true)
@@ -253,6 +259,85 @@ describe('efeitos de cartas', () => {
 
     game.endTurn()
     expect(game.getEffectiveStats(source)).toMatchObject({ power: 4, resistance: 3 })
+  })
+
+  it('permite atacar no turno de entrada para criatura com Ímpeto', () => {
+    const game = createGame()
+    const asura = cards.find(({ name }) => name === 'ASURA, O DESTRONADOR')
+    if (!asura) {
+      throw new Error('Carta de teste Asura, o Destronador ausente.')
+    }
+
+    const attacker = makeInstance(153, asura)
+    game.players[0].hand.push(attacker)
+
+    expect(game.playCard(attacker)).toBe(true)
+    expect(attacker.summonedOnTurn).toBe(game.turnNumber)
+
+    game.goToPhase(PHASES.combat)
+    expect(game.toggleAttacker(attacker)).toBe(true)
+  })
+
+  it('impede atacar no turno de entrada para criatura sem Ímpeto', () => {
+    const game = createGame()
+    const blocker = makeInstance(
+      154,
+      makeCard({ name: 'Criatura sem Ímpeto', subtype: 'Lobo' }),
+    )
+    game.players[0].hand.push(blocker)
+
+    expect(game.playCard(blocker)).toBe(true)
+    game.goToPhase(PHASES.combat)
+    expect(game.toggleAttacker(blocker)).toBe(false)
+  })
+
+  it('aplica a diferença do Atropelar aos pontos de vida com um bloqueador', () => {
+    const game = createGame()
+    const krohzus = cards.find(({ name }) => name === 'KROHZUS, GENERAL DA MATILHA')
+    if (!krohzus) {
+      throw new Error('Carta de teste Krohzus ausente.')
+    }
+
+    const attacker = makeInstance(148, krohzus)
+    attacker.summonedOnTurn = 0
+    const blocker = makeInstance(149, makeCard({ name: 'Bloqueador', defense: 3 }))
+    game.players[0].field.push(attacker)
+    game.players[1].field.push(blocker)
+
+    game.goToPhase(PHASES.combat)
+    expect(game.toggleAttacker(attacker)).toBe(true)
+    expect(game.declareAttack()).toBe(true)
+    expect(game.assignBlocker(blocker.id, attacker.id)).toBe(true)
+    expect(game.declareDefenders()).toBe(true)
+
+    expect(game.players[1].life).toBe(29)
+  })
+
+  it('soma resistências de vários bloqueadores para calcular Atropelar', () => {
+    const game = createGame()
+    const krohzus = cards.find(({ name }) => name === 'KROHZUS, GENERAL DA MATILHA')
+    if (!krohzus) {
+      throw new Error('Carta de teste Krohzus ausente.')
+    }
+
+    const attacker = makeInstance(150, krohzus)
+    attacker.summonedOnTurn = 0
+    const firstBlocker = makeInstance(151, makeCard({ name: 'Bloqueador 1', defense: 2 }))
+    const secondBlocker = makeInstance(152, makeCard({ name: 'Bloqueador 2', defense: 1 }))
+    game.players[0].field.push(attacker)
+    game.players[1].field.push(firstBlocker, secondBlocker)
+
+    game.goToPhase(PHASES.combat)
+    expect(game.toggleAttacker(attacker)).toBe(true)
+    expect(game.declareAttack()).toBe(true)
+    expect(game.assignBlocker(firstBlocker.id, attacker.id)).toBe(true)
+    expect(game.assignBlocker(secondBlocker.id, attacker.id)).toBe(true)
+    expect(game.declareDefenders()).toBe(true)
+    expect(game.setCombatDamage(attacker.id, firstBlocker.id, 2)).toBe(true)
+    expect(game.setCombatDamage(attacker.id, secondBlocker.id, 2)).toBe(true)
+    expect(game.resolveCombat()).toBe(true)
+
+    expect(game.players[1].life).toBe(29)
   })
 
   it('faz Brilho da Lua de Sangue fortalecer lobos aliados', () => {
@@ -316,13 +401,18 @@ describe('efeitos de cartas', () => {
   it('aplica reduções de custo a cartas na mão e usa o custo efetivo ao jogar', () => {
     const game = createGame()
     const costEffect: CardEffect = {
-      trigger: { type: 'phase', phase: 'main-two' },
+      trigger: { type: EFFECT_TRIGGERS.phase, phase: PHASES.mainTwo },
       actions: [
         {
-          type: 'modify',
+          type: EFFECT_ACTIONS.modify,
           target: {
-            selection: 'all',
-            filter: { controller: 'you', zone: 'hand', type: 'Encantamento', cost: 3 },
+            selection: EFFECT_TARGET_SELECTIONS.all,
+            filter: {
+              controller: EFFECT_TARGET_CONTROLLERS.you,
+              zone: ZONES.hand,
+              type: 'Encantamento',
+              cost: 3,
+            },
           },
           cost: -2,
         },
@@ -340,7 +430,7 @@ describe('efeitos de cartas', () => {
     game.players[0].hand.push(spell)
     game.players[0].mana = 1
 
-    game.goToPhase('main-two')
+    game.goToPhase(PHASES.mainTwo)
 
     expect(game.getEffectiveStats(spell).cost).toBe(1)
     expect(game.canPlay(spell)).toBe(true)
@@ -349,13 +439,16 @@ describe('efeitos de cartas', () => {
   it('aguarda a escolha quando um efeito de destruição tem múltiplos alvos', () => {
     const game = createGame()
     const destroyOnEntry: CardEffect = {
-      trigger: { type: 'other-enters-field', filter: { controller: 'you', type: 'Criatura' } },
+      trigger: {
+        type: EFFECT_TRIGGERS.otherEntersField,
+        filter: { controller: EFFECT_TARGET_CONTROLLERS.you, type: 'Criatura' },
+      },
       actions: [
         {
-          type: 'destroy',
+          type: EFFECT_ACTIONS.destroy,
           target: {
-            selection: 'one',
-            filter: { controller: 'opponent', type: 'Criatura' },
+            selection: EFFECT_TARGET_SELECTIONS.one,
+            filter: { controller: EFFECT_TARGET_CONTROLLERS.opponent, type: 'Criatura' },
           },
         },
       ],
@@ -379,8 +472,8 @@ describe('efeitos de cartas', () => {
     const game = createGame()
     const token = makeCard({ name: 'Ficha de Lobo', cost: 0 })
     const createTokenOnEntry: CardEffect = {
-      trigger: { type: 'enters-field' },
-      actions: [{ type: 'create-token', card: token, count: 2 }],
+      trigger: { type: EFFECT_TRIGGERS.entersField },
+      actions: [{ type: EFFECT_ACTIONS.createToken, card: token, count: 2 }],
     }
     const source = makeInstance(
       109,
@@ -403,7 +496,7 @@ describe('efeitos de cartas', () => {
     const attacker = makeInstance(133, krohzus)
     attacker.summonedOnTurn = 0
     game.players[0].field.push(attacker)
-    game.goToPhase('combat')
+    game.goToPhase(PHASES.combat)
 
     expect(game.toggleAttacker(attacker)).toBe(true)
     expect(game.declareAttack()).toBe(true)
@@ -436,16 +529,16 @@ describe('efeitos de cartas', () => {
     )
     game.players[0].field.push(attacker)
     game.players[1].field.push(target, legendaryTarget)
-    game.goToPhase('combat')
+    game.goToPhase(PHASES.combat)
 
     expect(game.toggleAttacker(attacker)).toBe(true)
     expect(game.declareAttack()).toBe(true)
     expect(game.declareDefenders()).toBe(true)
     expect(game.players[1].life).toBe(25)
 
-    game.goToPhase('end')
+    game.goToPhase(PHASES.end)
 
-    expect(game.pendingEffectTarget?.selection).toBe('up-to')
+    expect(game.pendingEffectTarget?.selection).toBe(EFFECT_TARGET_SELECTIONS.upTo)
     expect(game.pendingEffectTarget?.maxTargets).toBe(1)
     expect(game.pendingEffectTarget?.candidates.map(({ instance }) => instance.id)).toEqual([
       target.id,
@@ -468,7 +561,7 @@ describe('efeitos de cartas', () => {
     game.players[0].field.push(source)
     game.players[1].field.push(target)
 
-    game.goToPhase('end')
+    game.goToPhase(PHASES.end)
 
     expect(game.pendingEffectTarget).toBeNull()
     expect(game.players[1].field.map(({ id }) => id)).toContain(target.id)
@@ -486,14 +579,14 @@ describe('efeitos de cartas', () => {
     const target = makeInstance(140, makeCard({ name: 'Alvo comum' }))
     game.players[0].field.push(attacker)
     game.players[1].field.push(target)
-    game.goToPhase('combat')
+    game.goToPhase(PHASES.combat)
 
     expect(game.toggleAttacker(attacker)).toBe(true)
     expect(game.declareAttack()).toBe(true)
     expect(game.declareDefenders()).toBe(true)
-    game.goToPhase('end')
+    game.goToPhase(PHASES.end)
 
-    expect(game.pendingEffectTarget?.selection).toBe('up-to')
+    expect(game.pendingEffectTarget?.selection).toBe(EFFECT_TARGET_SELECTIONS.upTo)
     expect(game.confirmEffectTargets(true)).toBe(true)
     expect(game.players[1].field.map(({ id }) => id)).toContain(target.id)
   })
@@ -503,19 +596,19 @@ describe('efeitos de cartas', () => {
     const token = makeCard({ name: 'Ficha de vingança', cost: 0 })
     const watcherEffect: CardEffect = {
       trigger: {
-        type: 'other-leaves-field',
-        filter: { controller: 'opponent', subtype: 'Lobo' },
+        type: EFFECT_TRIGGERS.otherLeavesField,
+        filter: { controller: EFFECT_TARGET_CONTROLLERS.opponent, subtype: 'Lobo' },
       },
-      actions: [{ type: 'create-token', card: token }],
+      actions: [{ type: EFFECT_ACTIONS.createToken, card: token }],
     }
     const destructionEffect: CardEffect = {
-      trigger: { type: 'enters-field' },
+      trigger: { type: EFFECT_TRIGGERS.entersField },
       actions: [
         {
-          type: 'destroy',
+          type: EFFECT_ACTIONS.destroy,
           target: {
-            selection: 'one',
-            filter: { controller: 'opponent', subtype: 'Lobo' },
+            selection: EFFECT_TARGET_SELECTIONS.one,
+            filter: { controller: EFFECT_TARGET_CONTROLLERS.opponent, subtype: 'Lobo' },
           },
         },
       ],
@@ -538,13 +631,13 @@ describe('efeitos de cartas', () => {
   it('executa efeitos ao entrar em uma fase pelo controlador da carta', () => {
     const game = createGame()
     const endPhaseEffect: CardEffect = {
-      trigger: { type: 'phase', phase: 'end' },
+      trigger: { type: EFFECT_TRIGGERS.phase, phase: PHASES.end },
       actions: [
         {
-          type: 'modify',
-          target: { selection: 'source', filter: {} },
+          type: EFFECT_ACTIONS.modify,
+          target: { selection: EFFECT_TARGET_SELECTIONS.source, filter: {} },
           power: 1,
-          duration: 'end-of-turn',
+          duration: EFFECT_DURATIONS.endOfTurn,
         },
       ],
     }
@@ -554,7 +647,7 @@ describe('efeitos de cartas', () => {
     )
     game.players[0].field.push(source)
 
-    game.goToPhase('end')
+    game.goToPhase(PHASES.end)
     expect(game.getEffectiveStats(source).power).toBe(3)
   })
 })

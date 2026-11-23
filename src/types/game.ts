@@ -1,10 +1,14 @@
-import type { Card, CardEffect, EffectPhase } from '@/types/card'
+import type { Card, CardEffect } from '@/types/card'
+import type { EffectPhase } from '@/consts/phases'
+import type { CardLocation } from '@/consts/zones'
+import type { PendingEffectTargetSelection } from '@/consts/effect-targets'
+import type { EffectDuration } from '@/consts/effect-durations'
 
 export type CardStatModifier = {
   power: number
   resistance: number
   cost: number
-  duration: 'permanent' | 'end-of-turn'
+  duration: EffectDuration
   expiresAtTurn?: number
   expiresForPlayer?: number
 }
@@ -45,14 +49,14 @@ export type EffectResolution = {
 export type OwnedCard = {
   instance: CardInstance
   ownerIndex: number
-  zone: 'field' | 'hand'
+  zone: CardLocation
 }
 
 export type PendingTarget = {
   sourceName: string
   candidates: OwnedCard[]
   playerCandidates: number[]
-  selection: 'one' | 'up-to'
+  selection: PendingEffectTargetSelection
   maxTargets: number
   selectedInstanceIds: number[]
 }

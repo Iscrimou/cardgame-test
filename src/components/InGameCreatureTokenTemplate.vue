@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ZONES } from '@/consts/zones'
 import InGameCreatureTemplate from '@/components/InGameCreatureTemplate.vue'
 import type { Card } from '@/types/card'
 import type { CardCounterDisplay } from '@/types/game'
@@ -16,7 +17,7 @@ defineProps<{
 <template>
   <InGameCreatureTemplate
     :card="card"
-    zone="field"
+    :zone="ZONES.field"
     :power="power"
     :resistance="resistance"
     :base-power="basePower"

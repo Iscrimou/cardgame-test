@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
+import { ZONES, type CardLocation } from '@/consts/zones'
 import type { Card } from '@/types/card'
 
 const props = defineProps<{
   card: Card
-  zone: 'hand' | 'field'
+  zone: CardLocation
   cost?: number
 }>()
 
@@ -25,7 +26,7 @@ const imageHref = computed(() => {
   return url
 })
 
-const showCost = computed(() => props.zone === 'hand' && props.cost !== undefined)
+const showCost = computed(() => props.zone === ZONES.hand && props.cost !== undefined)
 const idPrefix = `in-game-magic-${useId()}`
 const ids = {
   background: `${idPrefix}-background`,
