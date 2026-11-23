@@ -19,10 +19,244 @@
         "cost": 4,
         "attack": 4,
         "defense": 2,
-        "keywords": ["Ameaçar"],
-        "effect": "Quando Lobo Sangrento Caminhante entra no campo de batalha, se ele foi conjurado de sua mão, ele causa 2 pontos de dano a qualquer alvo.",
+        "keywords": ["Roubo de vida"],
+        "effect": "Quando essa criatura entra no campo de batalha, ele causa 2 pontos de dano a qualquer alvo.",
         "inscription": "Não pense que viverá muito após ouvir o uivo.",
         "image": "Gemini_Generated_Image_j8thtdj8thtdj8th.jpg",
-        "rarity": 2
+        "rarity": 2,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "enters-field"
+                },
+                "actions": [
+                    {
+                        "type": "damage",
+                        "target": {
+                            "selection": "one",
+                            "filter": {
+                                "type": "Criatura"
+                            },
+                            "players": "any"
+                        },
+                        "amount": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "KROHZUS, GENERAL DA MATILHA",
+        "type": "Criatura Lendária",
+        "subtype": "Lobo Guerreiro",
+        "cost": 5,
+        "attack": 4,
+        "defense": 3,
+        "keywords": ["Atropelar"],
+        "effect": "Sempre que Krohzus causar dano ao oponente, crie uma ficha de lobo 2/2 com Ameaçar.",
+        "inscription": "Sob minha liderança, a lua anuncia a caçada, e o uivo decreta a guerra.",
+        "image": "Gemini_Generated_Image_z97rclz97rclz97r.jpg",
+        "rarity": 3,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "deals-damage-to-opponent"
+                },
+                "actions": [
+                    {
+                        "type": "create-token",
+                        "token": "LOBO"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "ASURA, O DESTRONADOR",
+        "type": "Criatura Lendária",
+        "subtype": "Lobo Demônio",
+        "cost": 5,
+        "attack": 5,
+        "defense": 4,
+        "keywords": ["Ímpeto, Atropelar"],
+        "effect": "No começo do fim de seu turno, se Asura causou dano a um jogador neste turno, você pode destruir até uma criatura alvo que não seja lendária.",
+        "inscription": "A vingança desumana caminhante.",
+        "image": "Gemini_Generated_Image_y9hpf2y9hpf2y9hp.jpg",
+        "rarity": 3,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "phase",
+                    "phase": "end",
+                    "condition": "source-dealt-damage-to-player-this-turn"
+                },
+                "actions": [
+                    {
+                        "type": "destroy",
+                        "target": {
+                            "selection": "up-to",
+                            "maxTargets": 1,
+                            "filter": {
+                                "type": "Criatura",
+                                "legendary": false
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "PRESA DE PRATA",
+        "type": "Criatura",
+        "subtype": "Lobo",
+        "cost": 2,
+        "attack": 2,
+        "defense": 2,
+        "keywords": [],
+        "effect": "Até o fim de cada turno, se você invocou um lobo de custo 4 ou mais, dê +2/+0 a essa criatura.",
+        "inscription": "",
+        "image": "Gemini_Generated_Image_x70csnx70csnx70c.jpg",
+        "rarity": 1,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "other-enters-field",
+                    "filter": {
+                        "controller": "you",
+                        "type": "Criatura",
+                        "subtype": "Lobo",
+                        "cost": { "min": 4 }
+                    }
+                },
+                "actions": [
+                    {
+                        "type": "modify",
+                        "target": {
+                            "selection": "source",
+                            "filter": {}
+                        },
+                        "power": 2,
+                        "duration": "end-of-turn"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "LOBO DA FLORESTA",
+        "type": "Criatura",
+        "subtype": "Lobo",
+        "cost": 1,
+        "attack": 2,
+        "defense": 1,
+        "keywords": [],
+        "effect": "",
+        "inscription": "As vezes o atalho não é o melhor caminho.",
+        "image": "Gemini_Generated_Image_ke8vrpke8vrpke8v.jpg",
+        "rarity": 0
+    },
+    {
+        "name": "SOMBRA DA LUA",
+        "type": "Criatura",
+        "subtype": "Lobo Ladino",
+        "cost": 4,
+        "attack": 3,
+        "defense": 2,
+        "keywords": ["Flash"],
+        "effect": "Quando essa criatura entra no campo de batalha, você pode colocar um contador -1/-1 em até duas criaturas alvo.",
+        "inscription": "As vítimas não viram nem ouviram, também, nem poderiam.",
+        "image": "Gemini_Generated_Image_ohuqlaohuqlaohuq.jpg",
+        "rarity": 1,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "enters-field"
+                },
+                "actions": [
+                    {
+                        "type": "add-counters",
+                        "target": {
+                            "selection": "up-to",
+                            "maxTargets": 2,
+                            "filter": {
+                                "type": "Criatura"
+                            }
+                        },
+                        "counter": "-1/-1",
+                        "amount": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "FARBYN E SNOW, INSEPARÁVEIS",
+        "type": "Criatura Lendária",
+        "subtype": "Humano Lobo",
+        "cost": 3,
+        "attack": 4,
+        "defense": 3,
+        "keywords": [],
+        "effect": "Quando Farbyn e Snow ataca, se outra criatura tipo Lobo está atacando, dê +1/+2 e Ameaçar a Farbyn e Snow até o final do turno.",
+        "inscription": "",
+        "image": "Gemini_Generated_Image_khgmeukhgmeukhgm.jpg",
+        "rarity": 2,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "attacks",
+                    "filter": {
+                        "controller": "you",
+                        "type": "Criatura",
+                        "subtype": "Lobo"
+                    }
+                },
+                "actions": [
+                    {
+                        "type": "modify",
+                        "target": {
+                            "selection": "source",
+                            "filter": {}
+                        },
+                        "power": 1,
+                        "resistance": 2,
+                        "duration": "end-of-turn"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "BRILHO DA LUA DE SANGUE",
+        "type": "Encantamento",
+        "cost": 3,
+        "keywords": [],
+        "effect": "Criaturas de tipo Lobo que você controla recebem +1/+1 e têm Iniciativa.",
+        "inscription": "",
+        "image": "Gemini_Generated_Image_1mtb1q1mtb1q1mtb.jpg",
+        "rarity": 2,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "continuous"
+                },
+                "actions": [
+                    {
+                        "type": "modify",
+                        "target": {
+                            "selection": "all",
+                            "filter": {
+                                "controller": "you",
+                                "type": "Criatura",
+                                "subtype": "Lobo"
+                            }
+                        },
+                        "power": 1,
+                        "resistance": 1
+                    }
+                ]
+            }
+        ]
     }
 ]

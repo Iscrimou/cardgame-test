@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 1050" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente de Fundo Profundo e Sombrio -->
+    <radialGradient id="bgGradient" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#1c1d22" />
+      <stop offset="55%" stop-color="#0d0e11" />
+      <stop offset="100%" stop-color="#030405" />
+    </radialGradient>
+
+    <!-- Metal Gótico / Prata Envelhecida Obscura -->
+    <linearGradient id="darkMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2c3038" />
+      <stop offset="25%" stop-color="#5a6270" />
+      <stop offset="50%" stop-color="#1e2126" />
+      <stop offset="75%" stop-color="#404652" />
+      <stop offset="100%" stop-color="#0f1114" />
+    </linearGradient>
+
+    <!-- Borda Secundária de Ferro Batido -->
+    <linearGradient id="ironBorder" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f232a" />
+      <stop offset="50%" stop-color="#0d0e12" />
+      <stop offset="100%" stop-color="#181a20" />
+    </linearGradient>
+
+    <!-- Brilho Místico Abissal Central -->
+    <radialGradient id="abyssalGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#5e0f15" />
+      <stop offset="40%" stop-color="#240306" />
+      <stop offset="80%" stop-color="#0d0203" />
+      <stop offset="100%" stop-color="#030001" />
+    </radialGradient>
+
+    <!-- Filtro de Sombra Densa / Projeção Obscura -->
+    <filter id="heavyShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#000000" flood-opacity="0.95" />
+    </filter>
+
+    <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- ================= FUNDO E MOLDURA DA CARTA ================= -->
+  <!-- Corpo Principal do Card -->
+  <rect x="25" y="25" width="700" height="1000" rx="36" fill="url(#bgGradient)" stroke="#050507" stroke-width="10" />
+
+  <!-- Moldura Externa de Metal Gótico -->
+  <rect x="48" y="48" width="654" height="954" rx="26" fill="none" stroke="url(#darkMetal)" stroke-width="12" filter="url(#heavyShadow)" />
+  
+  <!-- Linha de Contorno de Ferro Interno -->
+  <rect x="64" y="64" width="622" height="922" rx="18" fill="none" stroke="url(#ironBorder)" stroke-width="4" />
+
+  <!-- Cantoneiras Ornamentais Rústicas -->
+  <g fill="url(#darkMetal)">
+    <path d="M 64,120 L 120,64 L 95,64 L 64,95 Z" />
+    <circle cx="92" cy="92" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5" />
+    <path d="M 686,120 L 630,64 L 655,64 L 686,95 Z" />
+    <circle cx="658" cy="92" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5" />
+    <path d="M 64,930 L 120,986 L 95,986 L 64,955 Z" />
+    <circle cx="92" cy="958" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5" />
+    <path d="M 686,930 L 630,986 L 655,986 L 686,955 Z" />
+    <circle cx="658" cy="958" r="4" fill="#0d0e11" stroke="#3f4552" stroke-width="1.5" />
+  </g>
+
+  <!-- ================= PADRÃO DE FUNDO DO VERSO (ESTÉTICA DARK FANTASY) ================= -->
+  <g id="Card-Back-Pattern" filter="url(#heavyShadow)">
+    <!-- Área Central de Fundo Texturizada -->
+    <rect x="80" y="80" width="590" height="890" rx="12" fill="#07080a" stroke="url(#darkMetal)" stroke-width="4" />
+    
+    <!-- Vinheta Abissal Central -->
+    <circle cx="375" cy="525" r="280" fill="url(#abyssalGlow)" opacity="0.7" />
+
+    <!-- Padrão Geométrico / Rúnico Gótico de Fundo (Malha sutil) -->
+    <g stroke="#1a1d24" stroke-width="1" opacity="0.4" fill="none">
+      <line x1="80" y1="200" x2="670" y2="200" />
+      <line x1="80" y1="850" x2="670" y2="850" />
+      <line x1="200" y1="80" x2="200" y2="970" />
+      <line x1="550" y1="80" x2="550" y2="970" />
+      <!-- Círculos concêntricos decorativos -->
+      <circle cx="375" cy="525" r="220" />
+      <circle cx="375" cy="525" r="160" />
+      <circle cx="375" cy="525" r="100" />
+    </g>
+
+    <!-- Simbologia Mística Central (Círculo Rúnico / Sifão Sombrio) -->
+    <g transform="translate(375, 525)">
+      <!-- Anel Externo Denteado / Gótico -->
+      <circle cx="0" cy="0" r="130" fill="none" stroke="url(#darkMetal)" stroke-width="8" stroke-dasharray="15, 8" />
+      <circle cx="0" cy="0" r="115" fill="none" stroke="#5a161d" stroke-width="2" />
+      
+      <!-- Estrela / Geometria Oculta de 8 Pontas -->
+      <g stroke="url(#darkMetal)" stroke-width="3" fill="none">
+        <path d="M 0,-115 L 0,115 M -115,0 L 115,0 M -81,-81 L 81,81 M -81,81 L 81,-81" />
+      </g>
+
+      <!-- Runa / Símbolo Central Principal (Olho do Abismo / Insígnia Celta Sombria) -->
+      <circle cx="0" cy="0" r="65" fill="#050203" stroke="url(#darkMetal)" stroke-width="4" />
+      
+      <!-- Geometria Interna do Símbolo -->
+      <polygon points="0,-45 39,22 -39,22" fill="none" stroke="#a83232" stroke-width="3" filter="url(#glowEffect)" />
+      <polygon points="0,45 -39,-22 39,-22" fill="none" stroke="#4a5568" stroke-width="2" />
+      
+      <!-- Núcleo Brilhante -->
+      <circle cx="0" cy="0" r="16" fill="#a83232" filter="url(#glowEffect)" />
+      <circle cx="0" cy="0" r="6" fill="#f0e6d2" />
+    </g>
+
+    <!-- Ornamentos de Canto Internos (Simétricos) -->
+    <!-- Superior Esquerdo -->
+    <path d="M 110,110 L 180,110 L 110,180 Z" fill="none" stroke="url(#darkMetal)" stroke-width="3" opacity="0.6" />
+    <!-- Superior Direito -->
+    <path d="M 640,110 L 570,110 L 640,180 Z" fill="none" stroke="url(#darkMetal)" stroke-width="3" opacity="0.6" />
+    <!-- Inferior Esquerdo -->
+    <path d="M 110,940 L 180,940 L 110,870 Z" fill="none" stroke="url(#darkMetal)" stroke-width="3" opacity="0.6" />
+    <!-- Inferior Direito -->
+    <path d="M 640,940 L 570,940 L 640,870 Z" fill="none" stroke="url(#darkMetal)" stroke-width="3" opacity="0.6" />
+  </g>
+
+  <!-- ================= BORDAS DE ACABAMENTO FINAIS ================= -->
+  <rect x="80" y="80" width="590" height="890" rx="12" fill="none" stroke="#000000" stroke-width="6" opacity="0.9" />
+</svg>
