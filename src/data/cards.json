@@ -201,7 +201,31 @@
         "effect": "Quando Farbyn e Snow ataca, se outra criatura tipo Lobo está atacando, dê +1/+2 e Ameaçar a Farbyn e Snow até o final do turno.",
         "inscription": "",
         "image": "Gemini_Generated_Image_khgmeukhgmeukhgm.jpg",
-        "rarity": 2
+        "rarity": 2,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "attacks",
+                    "filter": {
+                        "controller": "you",
+                        "type": "Criatura",
+                        "subtype": "Lobo"
+                    }
+                },
+                "actions": [
+                    {
+                        "type": "modify",
+                        "target": {
+                            "selection": "source",
+                            "filter": {}
+                        },
+                        "power": 1,
+                        "resistance": 2,
+                        "duration": "end-of-turn"
+                    }
+                ]
+            }
+        ]
     },
     {
         "name": "BRILHO DA LUA DE SANGUE",
@@ -211,6 +235,28 @@
         "effect": "Criaturas de tipo Lobo que você controla recebem +1/+1 e têm Iniciativa.",
         "inscription": "",
         "image": "Gemini_Generated_Image_1mtb1q1mtb1q1mtb.jpg",
-        "rarity": 2
+        "rarity": 2,
+        "effects": [
+            {
+                "trigger": {
+                    "type": "continuous"
+                },
+                "actions": [
+                    {
+                        "type": "modify",
+                        "target": {
+                            "selection": "all",
+                            "filter": {
+                                "controller": "you",
+                                "type": "Criatura",
+                                "subtype": "Lobo"
+                            }
+                        },
+                        "power": 1,
+                        "resistance": 1
+                    }
+                ]
+            }
+        ]
     }
 ]

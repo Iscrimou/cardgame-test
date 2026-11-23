@@ -297,6 +297,29 @@ export const useGameStore = defineStore('game', () => {
       return false
     }
 
+    if (trigger.type === 'attacks') {
+      if (event.type !== 'attacks' || event.ownerIndex !== source.ownerIndex) {
+        return false
+      }
+      if (!event.attackerIds.includes(source.instance.id)) {
+        return false
+      }
+
+      const otherAttacker = getOwnedCards('field').find(
+        ({ instance, ownerIndex }) =>
+          ownerIndex === source.ownerIndex &&
+          instance.id !== source.instance.id &&
+          event.attackerIds.includes(instance.id) &&
+          (!trigger.filter ||
+            matchesTargetFilter(
+              { instance, ownerIndex, zone: 'field' },
+              source.ownerIndex,
+              trigger.filter,
+            )),
+      )
+      return otherAttacker !== undefined
+    }
+
     if (trigger.type === 'deals-damage-to-opponent') {
       return (
         event.type === 'damage-player' &&
@@ -857,6 +880,9 @@ export const useGameStore = defineStore('game', () => {
           modifier.expiresAtTurn !== turnNumber.value ||
           modifier.expiresForPlayer !== currentPlayerIndex.value,
       )
+      if (isCreature(instance)) {
+        instance.damage = 0
+      }
     }
     checkStateBasedActions()
     if (pendingEffectTarget.value) {
@@ -922,6 +948,12 @@ export const useGameStore = defineStore('game', () => {
 
     combatStep.value = 'defense'
     message.value = `${opponent.value.name}, declare seus bloqueadores.`
+    queueEffectEvent({
+      type: 'attacks',
+      attackerIds: [...attackers.value],
+      ownerIndex: currentPlayerIndex.value,
+    })
+    resolveEffectQueue()
     return true
   }
 

@@ -24,6 +24,7 @@ export type CardInstance = {
 
 export type FieldEvent =
   | { type: 'field'; transition: 'enters' | 'leaves'; instance: CardInstance; ownerIndex: number }
+  | { type: 'attacks'; attackerIds: number[]; ownerIndex: number }
   | {
       type: 'damage-player'
       source: CardInstance

@@ -23,6 +23,7 @@ export type EffectTarget = {
 export type CardEffectTrigger =
   | { type: 'enters-field' }
   | { type: 'leaves-field' }
+  | { type: 'attacks'; filter?: CardTargetFilter }
   | { type: 'other-enters-field'; filter?: CardTargetFilter }
   | { type: 'other-leaves-field'; filter?: CardTargetFilter }
   | { type: 'deals-damage-to-opponent' }

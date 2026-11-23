@@ -231,6 +231,47 @@ describe('efeitos de cartas', () => {
     expect(game.getEffectiveStats(enemyWolf)).toMatchObject({ power: 2, resistance: 2 })
   })
 
+  it('Farbyn ganha +1/+2 ao declarar ataque quando outro Lobo ataca', () => {
+    const game = createGame()
+    const farbyn = cards.find(({ name }) => name === 'FARBYN E SNOW, INSEPARÁVEIS')
+    if (!farbyn) {
+      throw new Error('Carta de teste Farbyn e Snow, Inseparáveis ausente.')
+    }
+
+    const source = makeInstance(144, farbyn)
+    source.summonedOnTurn = 0
+    const otherWolf = makeInstance(145, makeCard({ name: 'Outro Lobo', subtype: 'Lobo' }))
+    otherWolf.summonedOnTurn = 0
+    game.players[0].field.push(source, otherWolf)
+
+    game.goToPhase('combat')
+    expect(game.toggleAttacker(source)).toBe(true)
+    expect(game.getEffectiveStats(source)).toMatchObject({ power: 4, resistance: 3 })
+    expect(game.toggleAttacker(otherWolf)).toBe(true)
+    expect(game.declareAttack()).toBe(true)
+    expect(game.getEffectiveStats(source)).toMatchObject({ power: 5, resistance: 5 })
+
+    game.endTurn()
+    expect(game.getEffectiveStats(source)).toMatchObject({ power: 4, resistance: 3 })
+  })
+
+  it('faz Brilho da Lua de Sangue fortalecer lobos aliados', () => {
+    const game = createGame()
+    const bloodMoon = cards.find(({ name }) => name === 'BRILHO DA LUA DE SANGUE')
+    if (!bloodMoon) {
+      throw new Error('Carta de teste Brilho da Lua de Sangue ausente.')
+    }
+
+    const aura = makeInstance(141, bloodMoon)
+    const friendlyWolf = makeInstance(142, makeCard({ name: 'Lobo aliado' }))
+    const enemyWolf = makeInstance(143, makeCard({ name: 'Lobo inimigo' }))
+    game.players[0].field.push(aura, friendlyWolf)
+    game.players[1].field.push(enemyWolf)
+
+    expect(game.getEffectiveStats(friendlyWolf)).toMatchObject({ power: 3, resistance: 3 })
+    expect(game.getEffectiveStats(enemyWolf)).toMatchObject({ power: 2, resistance: 2 })
+  })
+
   it('inclui contadores +1/+1 e -1/-1 nos atributos efetivos', () => {
     const game = createGame()
     const creature = makeInstance(123, makeCard({ attack: 3, defense: 4 }))
@@ -238,6 +279,25 @@ describe('efeitos de cartas', () => {
     game.players[0].field.push(creature)
 
     expect(game.getEffectiveStats(creature)).toMatchObject({ power: 4, resistance: 5 })
+  })
+
+  it('remove o dano das criaturas no fim do turno sem remover contadores', () => {
+    const game = createGame()
+    const friendly = makeInstance(146, makeCard({ name: 'Criatura aliada', defense: 4 }))
+    const enemy = makeInstance(147, makeCard({ name: 'Criatura inimiga', defense: 3 }))
+    friendly.damage = 2
+    enemy.damage = 1
+    friendly.counters = { '+1/+1': 1 }
+
+    game.players[0].field.push(friendly)
+    game.players[1].field.push(enemy)
+
+    game.endTurn()
+
+    expect(friendly.damage).toBe(0)
+    expect(enemy.damage).toBe(0)
+    expect(friendly.counters).toEqual({ '+1/+1': 1 })
+    expect(game.getEffectiveStats(friendly)).toMatchObject({ power: 3, resistance: 5 })
   })
 
   it('trata ficha sem custo como custo efetivo zero', () => {
