@@ -891,6 +891,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     isDiscarding.value = false
+    
     for (const { instance } of getOwnedCards()) {
       instance.modifiers = (instance.modifiers ?? []).filter(
         (modifier) =>
@@ -902,7 +903,9 @@ export const useGameStore = defineStore('game', () => {
         instance.damage = 0
       }
     }
+
     checkStateBasedActions()
+
     if (pendingEffectTarget.value) {
       return
     }
@@ -934,7 +937,7 @@ export const useGameStore = defineStore('game', () => {
     return (
       isCreature(instance) &&
       (instance.summonedOnTurn !== turnNumber.value ||
-        hasKeyword(instance, 'Ímpeto'))
+        hasKeyword(instance, 'Ardor'))
     )
   }
 
@@ -1101,7 +1104,7 @@ export const useGameStore = defineStore('game', () => {
         )
       }
 
-      if (hasKeyword(attacker, 'Atropelar')) {
+      if (hasKeyword(attacker, 'Perfurar')) {
         const combinedBlockerResistance = assignedBlockers.reduce(
           (total, defender) => total + getEffectiveStats(defender).resistance,
           0,

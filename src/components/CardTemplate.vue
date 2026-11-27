@@ -253,7 +253,8 @@ const rarityColor = computed(() => {
         </div>
       </foreignObject>
 
-      <line
+      <line 
+        v-if="props.card.inscription"
         x1="200"
         y1="785"
         x2="550"

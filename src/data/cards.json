@@ -6,7 +6,7 @@
         "cost": 5,
         "attack": 3,
         "defense": 3,
-        "keywords": ["Iniciativa"],
+        "keywords": ["Antecipar"],
         "effect": "Aengus entra no campo de batalha com +X/+X, onde X é o número de criaturas celtas que você controla.",
         "inscription": "[...] ATHVBODVAE AVG SERVILIA TERENTIA SLM",
         "image": "Gemini_Generated_Image_bfktm3bfktm3bfkt.jpg",
@@ -19,7 +19,7 @@
         "cost": 4,
         "attack": 4,
         "defense": 2,
-        "keywords": ["Roubo de vida"],
+        "keywords": ["Pacto de sangue"],
         "effect": "Quando essa criatura entra no campo de batalha, ele causa 2 pontos de dano a qualquer alvo.",
         "inscription": "Não pense que viverá muito após ouvir o uivo.",
         "image": "Gemini_Generated_Image_j8thtdj8thtdj8th.jpg",
@@ -52,7 +52,7 @@
         "cost": 5,
         "attack": 4,
         "defense": 3,
-        "keywords": ["Atropelar"],
+        "keywords": ["Perfurar"],
         "effect": "Sempre que Krohzus causar dano ao oponente, crie uma ficha de lobo 2/2 com Ameaçar.",
         "inscription": "Sob minha liderança, a lua anuncia a caçada, e o uivo decreta a guerra.",
         "image": "Gemini_Generated_Image_z97rclz97rclz97r.jpg",
@@ -78,7 +78,7 @@
         "cost": 5,
         "attack": 5,
         "defense": 4,
-        "keywords": ["Ímpeto, Atropelar"],
+        "keywords": ["Ardor, Perfurar"],
         "effect": "No começo do fim de seu turno, se Asura causou dano a um jogador neste turno, você pode destruir até uma criatura alvo que não seja lendária.",
         "inscription": "A vingança desumana caminhante.",
         "image": "Gemini_Generated_Image_y9hpf2y9hpf2y9hp.jpg",
@@ -232,7 +232,7 @@
         "type": "Encantamento",
         "cost": 3,
         "keywords": [],
-        "effect": "Criaturas de tipo Lobo que você controla recebem +1/+1 e têm Iniciativa.",
+        "effect": "Criaturas de tipo Lobo que você controla recebem +1/+1 e têm Antecipar.",
         "inscription": "",
         "image": "Gemini_Generated_Image_1mtb1q1mtb1q1mtb.jpg",
         "rarity": 2,
@@ -258,5 +258,19 @@
                 ]
             }
         ]
+    },
+    {
+        "name": "SÁBIO LYCAN ANCESTRAL",
+        "type": "Criatura",
+        "subtype": "Lobo Druida",
+        "cost": 2,
+        "attack": 1,
+        "defense": 3,
+        "keywords": ["Guarda"],
+        "effect": "Adicione 1 a sua reserva de mana. Sempre que outra criatura tipo Lobo entrar no campo de batalha sob seu controle, compre uma carta. Essa habilidade só desencadeia uma vez por turno.",
+        "inscription": "",
+        "image": "Gemini_Generated_Image_7pb8h7pb8h7pb8h7.jpeg",
+        "rarity": 2,
+        "effects": []
     }
 ]

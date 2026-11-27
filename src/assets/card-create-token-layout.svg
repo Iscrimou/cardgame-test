@@ -139,7 +139,7 @@
 
     <!-- CONTEÚDO DE TEXTO -->
     <!-- Palavra-chave -->
-    <text x="120" y="672" class="card-keyword">Iniciativa</text>
+    <text x="120" y="672" class="card-keyword">Antecipar</text>
 
     <!-- Efeito da Carta -->
     <text x="120" y="705" class="card-body">

@@ -261,7 +261,7 @@ describe('efeitos de cartas', () => {
     expect(game.getEffectiveStats(source)).toMatchObject({ power: 4, resistance: 3 })
   })
 
-  it('permite atacar no turno de entrada para criatura com Ímpeto', () => {
+  it('permite atacar no turno de entrada para criatura com Ardor', () => {
     const game = createGame()
     const asura = cards.find(({ name }) => name === 'ASURA, O DESTRONADOR')
     if (!asura) {
@@ -278,11 +278,11 @@ describe('efeitos de cartas', () => {
     expect(game.toggleAttacker(attacker)).toBe(true)
   })
 
-  it('impede atacar no turno de entrada para criatura sem Ímpeto', () => {
+  it('impede atacar no turno de entrada para criatura sem Ardor', () => {
     const game = createGame()
     const blocker = makeInstance(
       154,
-      makeCard({ name: 'Criatura sem Ímpeto', subtype: 'Lobo' }),
+      makeCard({ name: 'Criatura sem Ardor', subtype: 'Lobo' }),
     )
     game.players[0].hand.push(blocker)
 
@@ -291,7 +291,7 @@ describe('efeitos de cartas', () => {
     expect(game.toggleAttacker(blocker)).toBe(false)
   })
 
-  it('aplica a diferença do Atropelar aos pontos de vida com um bloqueador', () => {
+  it('aplica a diferença do Perfurar aos pontos de vida com um bloqueador', () => {
     const game = createGame()
     const krohzus = cards.find(({ name }) => name === 'KROHZUS, GENERAL DA MATILHA')
     if (!krohzus) {
@@ -313,7 +313,7 @@ describe('efeitos de cartas', () => {
     expect(game.players[1].life).toBe(29)
   })
 
-  it('soma resistências de vários bloqueadores para calcular Atropelar', () => {
+  it('soma resistências de vários bloqueadores para calcular Perfurar', () => {
     const game = createGame()
     const krohzus = cards.find(({ name }) => name === 'KROHZUS, GENERAL DA MATILHA')
     if (!krohzus) {
